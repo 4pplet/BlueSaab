@@ -71,6 +71,16 @@ Tier 2 — polish:
       promoted from "optional bundle": even at the LM1117's ~6 mA floor
       it protects every unmodded unit's battery; the LDO+TVS hardware mod
       remains the optional enthusiast upgrade on top.
+
+**Design constraint — watchdog and sleep are COUPLED, implement together:**
+the F103 IWDG cannot be paused once started (runs in stop mode, max ~26 s
+timeout), so a standalone watchdog would reset the chip mid-sleep unless
+the sleep cycle wakes ~every 20 s to kick it. Co-design: RTC/periodic-wake
+kick integrated into the sleep loop, budgeting the wake bursts. Both are
+bench-iterative (stop mode drops PLL + RTOS tick; wake-on-CAN EXTI shares
+the CAN RX pin) — do NOT desk-develop; build on a validated 6.1.6 baseline
+with a current meter attached.
+
 - [ ] 9-5 dead-buttons fix — joins this release if a 9-5 is available for
       testing after the 6.1.6 validation session.
 
