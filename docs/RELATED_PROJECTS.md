@@ -19,13 +19,16 @@ auto-reconnect last device, built-in amplifier stage, no hands-free.
 
 Intelligence worth noting from their compatibility claims:
 
-- Supports 9-3 gen1 1998–2002 (Cab –2003), 9-5 gen1 **1998–2005 only** —
-  suggests the 2006 9-5 facelift changed the head unit/bus side even though
-  the I-Bus platform ran to 2009/10. Verify before claiming successor support
-  for 2006+ 9-5s.
-- **Excludes navigation-equipped 9-5s** — nav owns the SID display; likely a
-  display-resource conflict. Our `SidResource` negotiation may hit the same
-  wall; test on nav cars or gate SID text off.
+- Supports 9-3 gen1 1998–2002 (Cab –2003), 9-5 gen1 **1998–2005 only**.
+  Per our research (see SAAB_9-5_NOTES.md) the 2006+ 9-5 actually *keeps* the
+  dual-lead I-bus with the CDC on it — BlueSaab is confirmed working on a
+  2006 Denso-nav 9-5 — but facelift cars are trim-dependent (base GM "EHU"
+  radios sit on a new single-wire bus, unverified) and not pre-wired, so
+  commercial vendors draw the line at 2005.
+- **Excludes navigation-equipped 9-5s** — per our research this is likely a
+  support-simplicity call, not a hard incompatibility: Denso-nav cars work
+  (nav screen shows disc/track; SID text simply isn't used), Kenwood-nav
+  ('02–'04) cars have conflicting reports.
 - **"Not compatible with Night Panel"** — SID/display edge case to test.
 - Markets its amplifier as "higher volume than standard versions" — audio
   gain matters to users; consider a configurable gain option in the successor.

@@ -9,8 +9,11 @@ the STM32+RN52 board. Working name TBD.
 >
 > **Target cars (2026-07-22): pre-2006 SAABs** — 9-3 gen1 (1998–2002, Cab
 > –2003) and 9-5 gen1 (1998–2005), same proven range as v6 and CDConnect.
-> 2006+ 9-5 facelift and navigation-equipped cars are out of scope until the
-> bus/display differences are understood (see RELATED_PROJECTS.md).
+> 2006+ 9-5s keep the CDC-carrying I-bus and Denso-nav cars are field-proven
+> with BlueSaab, so they may "just work" — but base-radio facelift cars are
+> unverified and none are pre-wired, so they stay out of scope for launch.
+> See SAAB_9-5_NOTES.md for the full picture and 9-5 protocol quirks the
+> firmware must honor (0x6A1/0x6A2 handshake, ≥10 ms frame pacing, no beeps).
 
 What the successor must do (same job as v6, minus the dead parts):
 
