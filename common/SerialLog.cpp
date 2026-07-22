@@ -112,10 +112,17 @@ void SerialLog::log(const char* format, int value) {
 	mail_box.put(e);
 }
 
+// NOT ISR-safe (heap allocation) - call from thread context only.
 void SerialLog::logFrame(CANMessage* frame) {
+	LogEntry *e = mail_box.alloc();
+	if (e == NULL)
+		return; // check the mailbox BEFORE allocating, or the copy leaks
 	CANMessage *saved_frame = new CANMessage();
 	*saved_frame = *frame;
-	log((char *)leCANMessage, (int)saved_frame);
+	e->time = us_ticker_read();
+	e->format = (char *)leCANMessage;
+	e->value = (int)saved_frame;
+	mail_box.put(e);
 }
 
 void SerialLog::logShortString(const char *s) {

@@ -75,12 +75,19 @@ void RN52::initialize() {
 	queueCommand(RN52_CMD_VERSION);
 
 	bt_event_pin.fall(callback(this, &RN52::onGPIO2));
+	// GPIO2 events are 100 ms pulses - a connection made during the 5 s boot
+	// wait above produced a pulse we never saw. Query state once now so
+	// a2dpConnected (and thus the AVCRP buttons) can't start out stale.
+	queueCommand(RN52_CMD_QUERY);
 }
 
 
 int RN52::queueCommand(const char *cmd) {
-//	getLog()->log("queue: %s\r\n", (int) cmd);
-	rtosQueue.put(cmd);
+	osStatus st = rtosQueue.put(cmd);
+	if (st != osOK) {
+		getLog()->log("RN52: command queue full, command dropped\r\n");
+		return -1;
+	}
 	return 0;
 }
 
@@ -112,7 +119,7 @@ void RN52::processCommand(const char *cmd) {
 		int lines = 0;
 		title[0] = 0;
 		artist[0] = 0;
-		while (true) {
+		while (lines < 40) { // bounded: a chatty module must not trap this thread
 			RXEntry* gotBuf = serialRX.waitForRXLine(100);
 			if (gotBuf) {
 				lines++;
@@ -135,27 +142,32 @@ void RN52::processCommand(const char *cmd) {
 		}
 		scroller.set_info(artist, title);
 	} else if (isCmd(cmd, RN52_CMD_DETAILS)) { // Gather details until timeout
+		// Own buffer, and printed via %s: the buffer must never be passed as
+		// the *format* argument (deferred printf + mutable content + '%' in
+		// the data = garbage or a crash), and must not share title[] with
+		// the track-data path.
+		static char btaBuf[72];
 		int lines = 0;
-		while (true) {
+		while (lines < 40) { // bounded: a chatty module must not trap this thread
 			RXEntry* gotBuf = serialRX.waitForRXLine(100);
 			if (gotBuf) {
 				lines++;
 				if (isCmd(gotBuf->buf, "BTA=")) {
-					strncpy(title, gotBuf->buf, sizeof(title)); // May not zero terminate
-					title[sizeof(title) - 1] = 0;
-					getLog()->log(title);
+					copy_text(btaBuf, gotBuf->buf, sizeof(btaBuf));
+					getLog()->log("%s\r\n", (int) btaBuf);
 				}
 				serialRX.free(gotBuf);
 			} else {
-				//getLog()->log("details response %d lines\r\n", lines);
 				break;
 			}
 		}
 	} else if (isCmd(cmd, RN52_CMD_VERSION)) { // Gather version until timeout
-		while (true) {
+		int lines = 0;
+		while (lines < 40) {
 			RXEntry* gotBuf = serialRX.waitForRXLine(100);
 			if (!gotBuf)
 				break;
+			lines++;
 			// Response contains something like "Ver 1.16" - find the first
 			// digit.digit pattern and keep it (e.g. "1.16")
 			if (version[0] == '?') {
@@ -312,6 +324,9 @@ void RN52::discoverable(bool discoverable) {
 }
 
 void RN52::reboot() {
+	// The link is going down; don't leave a2dpConnected stale-true until the
+	// next GPIO2 pulse happens to arrive.
+	a2dpConnected = false;
 	queueCommand(RN52_CMD_REBOOT);
 }
 
