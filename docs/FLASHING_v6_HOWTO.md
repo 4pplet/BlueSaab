@@ -19,7 +19,11 @@ Get a firmware binary first: build it per [BUILD_v6.md](BUILD_v6.md)
 the board from the cable's 5 V). The board's BOOT0 and RESET push-buttons do
 the bootloader dance; no soldering.
 
-**Software:** `stm32flash` (`brew install stm32flash`).
+**Software:** `stm32flash` (`brew install stm32flash`), or if you prefer a
+GUI: **STM32CubeProgrammer** (ST's official free macOS app) supports the same
+UART bootloader — pick the serial port, connect after the BOOT0 dance, open
+the `.bin` at address `0x08000000`, program+verify. (This is likely the
+"user-friendly Mac app" used historically.)
 
 ```sh
 # Enter the ROM bootloader: hold BOOT0, press+release RESET, release BOOT0.

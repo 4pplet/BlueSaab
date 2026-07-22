@@ -62,6 +62,11 @@ Note: with SID text enabled, the SID row 2 shows scrolling **artist – title**
 track metadata when the phone provides it (fetched on every track change);
 "BlueSaab v6" is only the fallback text.
 
+From firmware **6.1.2**: entering CDC mode first shows the version banner
+`6.1.2 R1.16` (BlueSaab firmware + RN52 module firmware) for a few seconds —
+`R?` means the RN52 didn't report a version. This makes any unit
+self-identifying without a serial console.
+
 ## Debug serial console
 
 For bench testing and troubleshooting without the car.

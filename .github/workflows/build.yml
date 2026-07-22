@@ -1,0 +1,32 @@
+name: build
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pin the GCC 8 era verified locally (docs/BUILD_v6.md) — newer
+      # majors are untested against the vendored mbed OS 2 sources.
+      - uses: carlosperate/arm-none-eabi-gcc-action@v1
+        with:
+          release: '8-2019-q3-update'
+
+      - name: Build
+        run: make
+
+      - name: Size
+        run: arm-none-eabi-size BUILD/BlueSaab.elf
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BlueSaab-firmware
+          path: |
+            BUILD/BlueSaab.bin
+            BUILD/BlueSaab.hex
+            BUILD/BlueSaab.elf
