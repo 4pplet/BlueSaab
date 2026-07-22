@@ -114,14 +114,17 @@ normally, ALWAYS act when needed — so observability gets built in):
       unlock + CD mode must just work; a week of driving with zero
       unexplained resets on the counter
 
-**Test rig (build from successor prototype parts — dual-purpose):** ESP32
-devkit + SN65HVD230 as (a) timestamping CAN logger — turns the ≥10 ms /
-140 ms / 950 ms timing rules into measured pass/fail for 6.1.6, and (b)
-IHU simulator replaying 0x6A1/0x3C0 — bench-validates the whole handshake
-without a car, including hostile poll bursts against the seam guards. Same
-hardware + TWAI code the successor needs anyway; the rig IS successor
-progress. For 6.1.6's flicker verdict: soak 30+ min with scrolling
-metadata.
+**Test rig — to be unambiguous: the v6 board (STM32+RN52, fw 6.1.6) is
+always the device under test; the ESP32 is bench INSTRUMENTATION playing
+the car's role, and never runs v6 firmware.** ESP32 devkit + SN65HVD230 on
+a bench CAN bus with the v6 unit, acting as (a) timestamping CAN logger —
+turns the ≥10 ms / 140 ms / 950 ms timing rules into measured pass/fail,
+and (b) IHU simulator replaying 0x6A1/0x3C0 — bench-validates the whole
+handshake without a car, including hostile poll bursts against the seam
+guards. The synergy is procurement + code reuse only: same parts and same
+TWAI driver code the v7 successor prototype needs, and later v7 firmware
+gets tested against v6 as the reference implementation using this same
+rig. For 6.1.6's flicker verdict: soak 30+ min with scrolling metadata.
 
 Tier 3 — fixes:
 
