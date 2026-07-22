@@ -48,9 +48,15 @@ Tier 2 — polish:
       decision (RN52 can't report PDL state; would be a heuristic, and makes
       the unit pairable to anyone in range)
 - [x] SID state feedback "PAIRING" / "CONNECTED" — **v6.1.3**
-- [ ] Sleep on bus silence: STM32 stop + RN52_PWREN off + CAN transceiver
-      sleep, wake on CAN RX edge (~25 mA → ~6 mA; LM1117 Iq is the floor).
-      Own milestone; doubles as the successor's sleep-state-machine prototype
+- [ ] Sleep milestone (bundle, optional enthusiast upgrade): firmware sleep
+      on bus silence (STM32 stop + RN52_PWREN off + transceiver sleep, wake
+      on CAN RX edge) **plus** LDO swap — sleep alone gets ~25→6 mA (LM1117
+      Iq floor), sleep + low-Iq LDO gets ~0.2 mA. LDO: same-pinout SOT-223
+      swap; pick MCP1792 (45 V tolerant, ~70 µA Iq, 200 mA) over MCP1703A
+      (2 µA but only 16 V max — unsafe without TVS); add SMBJ TVS on 12 V
+      input while soldering. Prerequisite: measure real current profile
+      (idle/streaming/pairing peak) on the bench to confirm 200 mA headroom.
+      Doubles as the successor's sleep-state-machine prototype
 - ~~Voice assistant on long middle SEEK~~ — decided against (2026-07-22)
 
 Tier 3 — fixes:
@@ -89,6 +95,8 @@ the board for flashing — see docs/FLASHING_v6_HOWTO.md):
 - [ ] Optional: flash a `STACK_MONITOR_ENABLED 1` build first and check no
       thread's max stack usage approaches its size (SidResource and the new
       NodeStatusSender changed in 6.1.4); then flash the release build
+- [ ] Measure current draw from 12 V: idle, streaming, pairing peak —
+      informs the sleep-milestone LDO choice and the successor's buck sizing
 
 In-car phase (any 9-3/9-5; extra valuable on a 9-5 — the 0x6A2 path is new):
 
