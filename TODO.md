@@ -27,8 +27,16 @@ built-in CAN.
 - [ ] Note: mbed OS 2 and mbed-rtos are dead (Arm shut Mbed down in 2024). Libraries
       are vendored so builds still work, but no fixes will ever come from upstream.
 
-## Phase 2 — v7 hardware (ESP32)
+## Phase 2 — Successor hardware (ESP32)
 
+Spiritual successor to BlueSaab v6 — new hardware and firmware, but a
+**familiar in-car interface**: the v6 button map (`docs/USAGE_v6.md`) works
+unchanged; improvements only on currently-unused buttons. Hardware analysis:
+`docs/SUCCESSOR_HARDWARE_OPTIONS.md`.
+
+- [ ] Pick a project name
+- [ ] Design multi-device swap UX (several paired phones, switch from the
+      driver's seat — e.g. cycle on preset 3 with device name on SID)
 - [ ] Prototype A2DP sink + AVRCP on ESP32 with ESP-IDF (original ESP32 required —
       S3/C3/C6 have no Bluetooth Classic)
 - [ ] Prototype I-Bus on ESP32 TWAI @ 47.619 kbps with an SN65HVD230/TJA1051 transceiver

@@ -30,7 +30,7 @@ Bluetooth audio via a Microchip RN52 module.
 - Editable sources (Eagle) exist only for v5.0; v6 is PDF + BOM only. If the v6 CAD
   files can be recovered, add them here.
 
-## Planned v7 direction
+## Planned successor direction
 
 Replace both the STM32 and the RN52 with a single **ESP32** (the original ESP32 —
 not S3/C3, which lack Bluetooth Classic):

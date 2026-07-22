@@ -33,6 +33,9 @@ RN52, `H` help.
 
 ## Project direction
 
-See `TODO.md`. Short version: keep v6 (STM32+RN52) alive as-is; v7 will be an
-ESP32 redesign (A2DP sink + built-in TWAI CAN) since the RN52 is EOL.
-`HARDWARE/` holds board files — see `HARDWARE/README.md`.
+See `TODO.md`. Short version: keep v6 (STM32+RN52) alive as-is; a spiritual
+successor is planned as an ESP32 redesign (A2DP sink + built-in TWAI CAN, see
+`docs/SUCCESSOR_HARDWARE_OPTIONS.md`) since the RN52 is EOL. Hard requirement:
+the successor keeps the v6.1.1 in-car interface as a baseline (`docs/USAGE_v6.md`);
+improvements (e.g. multi-device swapping) must be additive on unused buttons,
+never repurpose an existing one. `HARDWARE/` holds board files — see `HARDWARE/README.md`.
