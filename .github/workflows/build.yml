@@ -15,7 +15,7 @@ jobs:
       # majors are untested against the vendored mbed OS 2 sources.
       - uses: carlosperate/arm-none-eabi-gcc-action@v1
         with:
-          release: '8-2019-q3-update'
+          release: '8-2019-q3'
 
       - name: Build
         run: make
