@@ -104,6 +104,8 @@ void SerialLog::printThreads() {
 
 void SerialLog::log(const char* format, int value) {
 	LogEntry *e = mail_box.alloc();
+	if (e == NULL)
+		return; // log queue full - drop the line rather than hardfault
 	e->time = us_ticker_read();
 	e->format = format;
 	e->value = value;

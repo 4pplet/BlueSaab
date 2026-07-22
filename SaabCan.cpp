@@ -35,19 +35,11 @@ void SaabCan::initialize(int hz) {
 //	getLog()->registerThread("SaabCan::sendFunc", &send_thread);
 }
 
-void SaabCan::sendCanMessage(CANMessage &msg) {
-	CANMessage *canTxFrame = new (canFrameQueue.alloc()) CANMessage();
-	*canTxFrame = msg;
-	canFrameQueue.put(canTxFrame);
-}
-
-void SaabCan::sendCanMessage(CANFormat format, unsigned int id, unsigned char len, const char *data) {
-	CANMessage *canTxFrame = new (canFrameQueue.alloc()) CANMessage(format, data, len, CANData, format);
-	canFrameQueue.put(canTxFrame);
-}
-
 void SaabCan::sendCanFrame(int canId, const unsigned char *data) {
-	CANMessage *canTxFrame = new (canFrameQueue.alloc()) CANMessage();
+	CANMessage *box = canFrameQueue.alloc();
+	if (box == NULL)
+		return; // TX queue full - drop the frame rather than hardfault
+	CANMessage *canTxFrame = new (box) CANMessage();
 	canTxFrame->id = canId;
 	for (int i = 0; i < canTxFrame->len; i++) {
 		canTxFrame->data[i] = data[i];

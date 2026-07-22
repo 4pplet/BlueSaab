@@ -32,28 +32,38 @@ Tier 0 — support/diagnostics (the one candidate worth bending the freeze for):
       (`6.1.2 R1.16`, ~4 s) — implemented in v6.1.2 (2026-07-22); bench
       test pending before release
 
-Tier 1 — restore what users miss (driver support already exists):
+Tier 1 — restore what users miss:
 
-- [ ] Volume up/down on presets 4/5 (`AV+`/`AV-` already in RN52 driver)
-- [ ] Extra-long middle SEEK → discoverable (wheel-only pairing, pre-v6 muscle memory)
-- [ ] Wire IHU pause events 0xB1/0xB0 → AVRCP pause/play (currently ignored)
+- [x] Volume down/up on presets 4/5 — **v6.1.3** (trims RN52 gain, which
+      boots at max)
+- [x] Extra-long middle SEEK → discoverable — **v6.1.3**
+- [ ] Wire IHU pause events 0xB1/0xB0 → AVRCP — DEFERRED: RN52 only has a
+      play/pause *toggle* (`AP`), so this risks state desync; revisit after
+      bench observation of when the IHU actually sends these events
 - [x] ~~Set RN52 gain to max at boot~~ — audit found v6 already does this
-      (`RN52_SET_MAXVOL` in `RN52::initialize`)
 
 Tier 2 — polish:
 
-- [ ] Auto-discoverable when paired-device list is empty (first-install UX)
-- [ ] SID state feedback: "PAIRING" / "CONNECTED" / "NO PHONE" (SID builds only)
+- [ ] Auto-discoverable when paired-device list is empty — needs a design
+      decision (RN52 can't report PDL state; would be a heuristic, and makes
+      the unit pairable to anyone in range)
+- [x] SID state feedback "PAIRING" / "CONNECTED" — **v6.1.3**
 - [ ] Sleep on bus silence: STM32 stop + RN52_PWREN off + CAN transceiver
       sleep, wake on CAN RX edge (~25 mA → ~6 mA; LM1117 Iq is the floor).
-      Doubles as the successor's sleep-state-machine prototype
-- [ ] Voice assistant (Siri etc.) on long middle SEEK (`vassistant()` exists)
+      Own milestone; doubles as the successor's sleep-state-machine prototype
+- ~~Voice assistant on long middle SEEK~~ — decided against (2026-07-22)
 
 Tier 3 — fixes:
 
 - [ ] 9-5 "buttons dead until source switch" bug — implement the missing
-      "IHU not in CDC mode" status variant (see docs/SAAB_9-5_NOTES.md #3)
-- [ ] Make the CDC-entry beep (0x430) compile-time optional (9-5 advice)
+      "IHU not in CDC mode" status variant (see docs/SAAB_9-5_NOTES.md #3);
+      needs a 9-5 for testing
+- [x] CDC-entry beep compile-time optional (`CDC_ENTRY_BEEP_ENABLED`) — **v6.1.3**
+
+Audit fixes shipped in **v6.1.3**: scroll-seam separator (A2), dead
+sendCanMessage overloads removed (A3), Mail::alloc NULL checks (A4),
+lowercase-hex decode (A6). Still open: A1 ISR-locking (bundle with future
+SID work), A5 TX error counters.
 
 Out of scope for v6.2: config system, shuffle, multi-device (RN52 can't).
 (Track metadata on SID turned out to already exist — see docs/V6_CODE_AUDIT.md.)

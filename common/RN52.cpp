@@ -23,12 +23,14 @@
 
 #include "SerialLog.h"
 #include "Scroller.h"
+#include "SidResource.h"
 
 static int getVal(char c) {
 	if (c >= '0' && c <= '9')
 		return (c - '0');
-	else
-		return (c - 'A' + 10);
+	if (c >= 'a' && c <= 'f')
+		return (c - 'a' + 10);
+	return (c - 'A' + 10);
 }
 
 void RN52::onGPIO2() {
@@ -37,6 +39,9 @@ void RN52::onGPIO2() {
 
 void RN52::onA2DPProfileChange(bool connected) {
 	if (connected) {
+		#if SID_TEXT_CONTROL_ENABLED
+			sidResource.showTemporary("CONNECTED", 3);
+		#endif
 		sendAVCRP(RN52::PLAYPAUSE);
 		// Ask for track data a bit later, to give the phone some time to start playing
 		timeout.attach(callback(this, &RN52::getTrackData), 3.0);

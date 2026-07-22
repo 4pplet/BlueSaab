@@ -31,26 +31,31 @@ Buttons reach BlueSaab only while the CD changer source is active.
 | **Seek down / Track −** | Previous track |
 | **Preset 1** | Discoverable mode — pair a new phone |
 | **Preset 3** | Reconnect to last paired phone |
+| **Preset 4** (6.1.3+) | RN52 gain down (gain boots at max — this trims it) |
+| **Preset 5** (6.1.3+) | RN52 gain up |
 | **Preset 6** | Disconnect current phone |
+| **Extra-long middle SEEK, >2 s** (6.1.3+) | Discoverable mode (wheel-side pairing) |
 | Switching away from CD changer source | Disconnects Bluetooth |
 | Switching to CD changer source | Connectable + auto-reconnect last phone |
 
-Decoded by the firmware but currently **unassigned** (candidates for future
-features): long press SEEK+/SEEK−, long/extra-long press of middle SEEK,
-RANDOM (long press CD/RDM), pause on/off, presets 2, 4, 5.
+With SID text enabled, 6.1.3+ also flashes **"PAIRING"** when discoverable
+mode is triggered and **"CONNECTED"** when a phone attaches.
+
+Decoded by the firmware but currently **unassigned**: long press SEEK+/SEEK−,
+long press of middle SEEK, RANDOM (long press CD/RDM), pause on/off, preset 2.
 
 ## Differences from older firmware (v5.x / early v6)
 
 Older documentation floating around describes a different button map. If your
 notes mention any of these, they predate 6.1.1:
 
-| Old behavior | Status in 6.1.1 |
+| Old behavior | Status now |
 | --- | --- |
-| Long middle-SEEK (one beep) → discoverable | Removed — use **preset 1** |
+| Long middle-SEEK (one beep) → discoverable | Removed in 6.1.1; **back in 6.1.3** as the extra-long (>2 s) press |
 | Longer middle-SEEK hold (second beep) → connectable | Removed — automatic on entering CDC mode |
-| Preset 1 → volume up | Preset 1 is now **discoverable/pairing** |
-| Preset 4 → volume down | Not wired |
-| Preset 2 → max volume (`SS,0F`) | Not wired |
+| Preset 1 → volume up | Preset 1 is now **discoverable/pairing**; volume moved to presets 4/5 (6.1.3+) |
+| Preset 4 → volume down | Back in **6.1.3** |
+| Preset 2 → max volume (`SS,0F`) | Not wired — max gain is applied automatically at boot |
 | Long CD/RDM → volume gain step | Not wired |
 
 The RN52 volume-step commands (`AV+`, `AV-`) still exist in the driver but

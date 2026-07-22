@@ -91,10 +91,20 @@ void Buttons::onFrame(CANMessage& frame) {
 			bluetooth.prev();
 			break;
 		case Buttons::IHU1:
+		case Buttons::SEEK_MIDDLE_EXTRA_LONG: // wheel-only pairing, pre-v6 muscle memory
 			bluetooth.discoverable();
+			#if SID_TEXT_CONTROL_ENABLED
+				sidResource.showTemporary("PAIRING", 8);
+			#endif
 			break;
 		case Buttons::IHU3:
 			bluetooth.reconnect();
+			break;
+		case Buttons::IHU4:
+			bluetooth.volumeDown();
+			break;
+		case Buttons::IHU5:
+			bluetooth.volumeUp();
 			break;
 		case Buttons::IHU6:
 			bluetooth.disconnect();

@@ -37,6 +37,14 @@ void Bluetooth::next() {
 	rn52.sendAVCRP(RN52::NEXT);
 }
 
+void Bluetooth::volumeUp() {
+	rn52.sendAVCRP(RN52::VOLUP);
+}
+
+void Bluetooth::volumeDown() {
+	rn52.sendAVCRP(RN52::VOLDOWN);
+}
+
 void Bluetooth::vassistant() {
 	rn52.sendAVCRP(RN52::VASSISTANT);
 }

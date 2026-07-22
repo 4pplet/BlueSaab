@@ -14,10 +14,15 @@ Get a firmware binary first: build it per [BUILD_v6.md](BUILD_v6.md)
 
 ## Method A — ROM serial bootloader (primary, historically used)
 
-**Hardware:** any 3.3 V-logic USB-serial adapter on the **FTDI header**
-(6-pin, standard FTDI cable pinout — black end = GND; the header can power
-the board from the cable's 5 V). The board's BOOT0 and RESET push-buttons do
-the bootloader dance; no soldering.
+**Hardware:** one cable is all you need — the board's 6-pin FTDI header is
+laid out for the **FTDI TTL-232R-3V3** cable (the schematic literally labels
+the pins BLACK/BROWN/RED/ORANGE/YELLOW/GREEN, that cable's wire colors), and
+the cable's 5 V pin **powers the board** — no 12 V supply, no micro-USB
+(which is power-only and useless for flashing). Any generic 3.3 V-logic
+USB-serial breakout (CP2102/FT232) + jumper wires works equally well:
+GND→pin 1 (black), 5 V→pin 3 (red), TXD→pin 4 (orange), RXD→pin 5 (yellow).
+The on-board BOOT0 and RESET push-buttons do the bootloader dance; no
+soldering.
 
 **Software:** `stm32flash` (`brew install stm32flash`), or if you prefer a
 GUI: **STM32CubeProgrammer** (ST's official free macOS app) supports the same

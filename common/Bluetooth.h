@@ -34,6 +34,8 @@ public:
 	void play();
 	void prev();
 	void next();
+	void volumeUp();
+	void volumeDown();
 	void discoverable();
 	void connectable();
 	void reconnect();

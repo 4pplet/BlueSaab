@@ -101,6 +101,7 @@ void SidResource::sendDisplayRequest() {
 }
 
 void SidResource::showTemporary(const char *text, int grants) {
+	tempGrants = 0; // disarm while the text is being swapped (callers may race the CAN ISR)
 	strncpy(tempText, text, sizeof(tempText) - 1);
 	tempText[sizeof(tempText) - 1] = 0;
 	tempGrants = grants;

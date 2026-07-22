@@ -71,7 +71,9 @@ void CDCStatus::onCDCControlFrame(CANMessage& frame) {
 				}
 				sidResource.activate();
 			#endif
-			saabCan.sendCanFrame(SOUND_REQUEST, soundCmd);
+			#if CDC_ENTRY_BEEP_ENABLED
+				saabCan.sendCanFrame(SOUND_REQUEST, soundCmd);
+			#endif
 			thread.signal_set(0x2);
 			bluetooth.connectable();
 			bluetooth.reconnect();

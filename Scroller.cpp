@@ -49,9 +49,10 @@ void Scroller::set_info(const char *artist_,const char *title_) {
 	strcat(text, title);
 	text_len = strlen(text);
 	if (text_len > 12) {
-		// It doesn't fit, we'll need to scroll, so add a dash at the end
-		// strcat(text, " - ");
-		strcat(text, " ");
+		// It doesn't fit, we'll need to scroll, so add a separator before
+		// the text repeats. Must be 3 chars: text_len is advanced by 3 and
+		// the wrap-around logic depends on it (see the tests below).
+		strcat(text, " - ");
 		text_len += 3;
 	}
 
