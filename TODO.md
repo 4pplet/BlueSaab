@@ -59,6 +59,21 @@ Tier 2 — polish:
       Doubles as the successor's sleep-state-machine prototype
 - ~~Voice assistant on long middle SEEK~~ — decided against (2026-07-22)
 
+### v6.1.7 candidates — "the reliability release" (post-6.1.6-validation)
+
+- [ ] **Hardware watchdog (IWDG)** — currently absent. The unit is
+      always-powered, buried behind trunk trim, with no reachable reset:
+      any firmware hang today persists until the harness is unplugged,
+      with Bluetooth dead and ~25 mA draining the battery. IWDG + a
+      thread-liveness kick turns every unknown future hang into a blip.
+      ~20 lines; the single highest-value robustness addition left.
+- [ ] **Sleep on bus silence (firmware half of the sleep milestone)** —
+      promoted from "optional bundle": even at the LM1117's ~6 mA floor
+      it protects every unmodded unit's battery; the LDO+TVS hardware mod
+      remains the optional enthusiast upgrade on top.
+- [ ] 9-5 dead-buttons fix — joins this release if a 9-5 is available for
+      testing after the 6.1.6 validation session.
+
 Tier 3 — fixes:
 
 - [ ] 9-5 "buttons dead until source switch" bug — implement the missing
