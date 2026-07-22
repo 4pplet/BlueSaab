@@ -4,6 +4,13 @@ CD changer emulator for older SAAB cars (9-3/9-5 with I-Bus): the car's head uni
 thinks it's talking to a CD changer over CAN, while audio actually streams from a
 phone over Bluetooth (Microchip RN52 module). Firmware v6.1.1, hardware v6.1.
 
+Lineage: this repo is the mbed/STM32 rewrite of the Arduino-era "SAAB-CDC"
+codebase (github.com/kveilands/SAAB-CDC, forks incl. si1/SAAB-CDC) — same
+authors, same RN52 concept, ATmega + MCP2515 hardware. That generation had a
+different button map (long-press SEEK = pairing, presets 1/2/4 = volume);
+old user docs describing those buttons refer to it, not to 6.1.1. Its commit
+history is a useful I-Bus protocol reference.
+
 ## Build
 
 - Target: STM32F103RB (Cortex-M3), mbed OS 2 "classic" + mbed-rtos (both vendored
