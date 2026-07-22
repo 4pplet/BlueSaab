@@ -52,8 +52,10 @@ both on the board's headers:
 
   After flashing, bench-verify on the UART2 console (boot banner, `d`, `V`)
   before reinstalling in the car.
-- **Serial bootloader**: BOOT0 button + FTDI header (USART1) with
-  `stm32flash`, if no SWD probe is at hand.
+- **Serial bootloader** (the primary, historically used method): BOOT0
+  button + FTDI header (USART1) with `stm32flash`. (The pyOCD launch config
+  referenced in `.gitignore` was the original developers' debug setup, not
+  the flashing workflow.)
 
 ## Debug console
 
