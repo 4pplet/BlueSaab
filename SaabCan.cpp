@@ -32,7 +32,9 @@ void SaabCan::initialize(int hz) {
 
 	iBus.attach(callback(this,&SaabCan::onRx), mbed::CAN::RxIrq);
 	send_thread.start(callback(this, &SaabCan::sendFunc));
-//	getLog()->registerThread("SaabCan::sendFunc", &send_thread);
+	#if STACK_MONITOR_ENABLED
+		getLog()->registerThread("SaabCan::sendFunc", &send_thread);
+	#endif
 }
 
 void SaabCan::sendCanFrame(int canId, const unsigned char *data) {
@@ -92,8 +94,8 @@ void SaabCan::attach(unsigned int canId, Callback<void(CANMessage&)> callBack) {
 		if (callBacks[i].id == 0) {
 			callBacks[i].callBack = callBack;
 			callBacks[i].id = canId;
-//			getLog()->log("SaabCan::attach canId %x", canId);
-			break;
+			return;
 		}
 	}
+	getLog()->log("SaabCan::attach: table full, callback for id %x DROPPED\r\n", canId);
 }

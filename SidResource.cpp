@@ -56,7 +56,9 @@ void SidResource::initialize() {
 	saabCan.attach(IHU_DISPLAY_RESOURCE_REQ, callback(this, &SidResource::ihuRequestReceived));
 //	getLog()->log("SidResource::initialize()\r\n");
 	thread.start(callback(this, &SidResource::run));
-//	getLog()->registerThread("SidResource::run", &thread);
+	#if STACK_MONITOR_ENABLED
+		getLog()->registerThread("SidResource::run", &thread);
+	#endif
 }
 
 /*

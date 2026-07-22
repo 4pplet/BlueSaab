@@ -86,6 +86,9 @@ the board for flashing — see docs/FLASHING_v6_HOWTO.md):
       music; `P`/`N`/`R` control playback; `d`, `u`, `H`
 - [ ] `E` counter exists (note: off-car it WILL count TX errors — no CAN bus
       is connected; that's expected, not a failure)
+- [ ] Optional: flash a `STACK_MONITOR_ENABLED 1` build first and check no
+      thread's max stack usage approaches its size (SidResource and the new
+      NodeStatusSender changed in 6.1.4); then flash the release build
 
 In-car phase (any 9-3/9-5; extra valuable on a 9-5 — the 0x6A2 path is new):
 

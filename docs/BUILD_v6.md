@@ -89,3 +89,9 @@ Releasing a firmware version:
 
 - `SID_TEXT_CONTROL_ENABLED` in [SidResource.h](../SidResource.h) — set to
   `0` to build without SID text support (e.g. for nav-equipped cars).
+- `CDC_ENTRY_BEEP_ENABLED` in [SaabCan.h](../SaabCan.h) — set to `0` to
+  suppress the beep on entering CDC mode.
+- `STACK_MONITOR_ENABLED` in [common/SerialLog.h](../common/SerialLog.h) —
+  set to `1` for a debug build that prints every thread's stack high-water
+  mark once per second on the console. Use on the bench to verify stack
+  margins after thread changes; keep `0` for releases.

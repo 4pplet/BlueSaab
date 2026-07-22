@@ -22,6 +22,11 @@
 #include <rtos.h>
 #include <vector>
 
+// Set to 1 to print every registered thread's stack size and high-water mark
+// once per second on the debug console. Debug builds only - use to verify
+// stack margins whenever threads or their workloads change.
+#define STACK_MONITOR_ENABLED 0
+
 enum LogEntryType {
 	leCANMessage = 0,
 	leShortString = 1

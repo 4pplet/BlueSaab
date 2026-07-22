@@ -52,7 +52,9 @@ void RN52::initialize() {
 	serialRX.initialize();
 
 	thread.start(callback(this, &RN52::run));
-//	getLog()->registerThread("RN52::run", &thread);
+	#if STACK_MONITOR_ENABLED
+		getLog()->registerThread("RN52::run", &thread);
+	#endif
 
 	bt_pwren_pin = 1;
 	bt_cmd_pin = 1;

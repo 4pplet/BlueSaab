@@ -43,7 +43,9 @@ int main() {
 	getLog()->log("BlueSaab\r\n");
 	getLog()->log("Hardware version: 6.1\r\n");
 	getLog()->log("Firmware version: " FIRMWARE_VERSION "\r\n");
-//	getLog()->registerThread("logThread", &logThread);
+	#if STACK_MONITOR_ENABLED
+		getLog()->registerThread("logThread", &logThread);
+	#endif
 
 	aliveLed = 1;
 

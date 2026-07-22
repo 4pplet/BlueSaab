@@ -80,6 +80,9 @@ class NodeStatusSender {
 public:
 	NodeStatusSender(): thread(osPriorityNormal, 256) {
 		thread.start(callback(this, &NodeStatusSender::run));
+		#if STACK_MONITOR_ENABLED
+			getLog()->registerThread("NodeStatusSender::run", &thread);
+		#endif
 	}
 	void send(int32_t signal) {
 		thread.signal_set(signal);
@@ -93,7 +96,9 @@ void CDCStatus::initialize() {
 	saabCan.attach(CDC_CONTROL, callback(this, &CDCStatus::onCDCControlFrame));
 //	getLog()->log("CDCStatus::initialize()\r\n");
 	thread.start(callback(this, &CDCStatus::run));
-//	getLog()->registerThread("CDCStatus::run", &thread);
+	#if STACK_MONITOR_ENABLED
+		getLog()->registerThread("CDCStatus::run", &thread);
+	#endif
 }
 
 void CDCStatus::onCDCControlFrame(CANMessage& frame) {

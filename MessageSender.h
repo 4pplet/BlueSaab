@@ -36,7 +36,9 @@ public:
 		 thread(osPriorityNormal, 256)
 	{
 		thread.start(callback(this, &MessageSender::run));
-//		getLog()->registerThread("MessageSender::run", &thread);
+		#if STACK_MONITOR_ENABLED
+			getLog()->registerThread("MessageSender::run", &thread);
+		#endif
 	}
 	void send();
 };
