@@ -179,11 +179,15 @@ TSEG1 15/TSEG2 5, sample point 76.19 %, SJW 2, BTR 0x014E0023 →
   SidResource thread; locking now effective), B1 (single sender thread for
   all 0x6A2 sequences), A5 (TX error/drop counters, debug `E`), B3
   (truthful init log). SidResource stack bumped 256→384 (B4 partial).
-- **Open:** B2 (attach() silent overflow), B4 (stack monitoring in other
-  threads), B5 (title[] scratch reuse), B6 (remaining ISR-context frame
-  callbacks — Buttons/CDCStatus handlers still run in the RX interrupt;
-  they only queue/signal, which is ISR-safe, but the successor should
-  dispatch to a task regardless).
+- **Open:** B6 (remaining ISR-context frame callbacks — Buttons/CDCStatus
+  handlers still run in the RX interrupt; they only queue/signal, which is
+  ISR-safe, but the successor should dispatch to a task regardless).
+  (B2/B4/B5 fixed across 6.1.4–6.1.6.)
+- **Design gap (found 2026-07-22, planned for 6.1.7): no watchdog.** The
+  IWDG is never enabled, on an always-powered device with no reachable
+  reset — any firmware hang persists until the harness is unplugged, with
+  ~25 mA battery drain. The successor must also treat a watchdog (ESP32
+  task WDT) as mandatory from day one.
 - Bench validation of all of the above: pending (v6.1.2+ has not yet
   touched hardware).
 

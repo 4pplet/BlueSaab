@@ -3,6 +3,15 @@
 Versions 6.1.2–6.1.6 are unreleased pending hardware validation (see the
 checklist in TODO.md); they will ship together as one release.
 
+## 6.1.7 (planned) — "the reliability release"
+
+Not started; scope in TODO.md. Planned: hardware watchdog (IWDG — the unit
+is always-powered with no reachable reset, so any hang currently persists
+until the harness is unplugged), sleep on bus silence (battery protection
+for all units; the LDO+TVS hardware mod remains optional on top), and the
+9-5 dead-buttons fix if a test car is available. Plus anything the 6.1.6
+validation session turns up.
+
 ## 6.1.6 (2026-07-22) — unreleased
 
 Full-codebase bug hunt by three independent adversarial reviewers; all
