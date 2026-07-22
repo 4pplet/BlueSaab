@@ -35,10 +35,21 @@ footprint at v6.1.1: **103 KB flash** (of 128 KB), **~10 KB static RAM**
 
 Two options, both on the board's headers:
 
-- **SWD/JTAG**: 10-pin 1.27 mm JTAG header; an ST-Link (or the ST-Link half
-  of a Nucleo-F103RB board) + `st-flash`/OpenOCD/pyOCD works. The
-  `.gitignore` references an old pyOCD launch config — pyOCD is the
-  historically used flasher.
+- **SWD/JTAG**: 10-pin 1.27 mm Cortex debug header; an ST-Link (or the
+  ST-Link half of a Nucleo-F103RB board). With OpenOCD:
+
+  ```sh
+  # back up the unit's current firmware first (128 KB flash):
+  openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
+          -c "init; reset halt; flash read_bank 0 backup_v6_unit.bin; exit"
+
+  # flash:
+  openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
+          -c "program BUILD/BlueSaab.elf verify reset exit"
+  ```
+
+  After flashing, bench-verify on the UART2 console (boot banner, `d`, `V`)
+  before reinstalling in the car.
 - **Serial bootloader**: BOOT0 button + FTDI header (USART1) with
   `stm32flash`, if no SWD probe is at hand.
 
