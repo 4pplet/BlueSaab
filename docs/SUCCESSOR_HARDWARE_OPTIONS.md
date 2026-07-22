@@ -4,6 +4,9 @@ The new device is a **spiritual successor to BlueSaab v6**: a fresh, fully
 open design that does the same job in the same cars, not an incremental v7 of
 the STM32+RN52 board. Working name TBD.
 
+> **DECISION (2026-07-22): Option A — single ESP32.** One chip for Bluetooth
+> audio, CAN, and application logic. Options B/C kept below for the record.
+
 What the successor must do (same job as v6, minus the dead parts):
 
 - **Familiar in-car interface, v6 baseline.** Existing users must not have to
@@ -29,7 +32,7 @@ What the successor must do (same job as v6, minus the dead parts):
 - **12 V automotive power**, ignition-switched.
 - **Open toolchain** — the whole point of the revival. NDA'd SDKs disqualify.
 
-## Option A — ESP32 (recommended)
+## Option A — ESP32 (CHOSEN)
 
 One original-series ESP32 module replaces **both** the STM32 and the RN52.
 

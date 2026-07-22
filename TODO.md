@@ -34,9 +34,14 @@ Spiritual successor to BlueSaab v6 — new hardware and firmware, but a
 unchanged; improvements only on currently-unused buttons. Hardware analysis:
 `docs/SUCCESSOR_HARDWARE_OPTIONS.md`.
 
+**Decided 2026-07-22: single ESP32** (Option A) — one chip for BT audio, CAN,
+and app logic.
+
 - [ ] Pick a project name
 - [ ] Design multi-device swap UX (several paired phones, switch from the
       driver's seat — e.g. cycle on preset 3 with device name on SID)
+- [ ] Order prototype parts: ESP32-A1S audio dev board (or WROOM devkit +
+      PCM5102A board) + TJA1051/SN65HVD230 transceiver breakout
 - [ ] Prototype A2DP sink + AVRCP on ESP32 with ESP-IDF (original ESP32 required —
       S3/C3/C6 have no Bluetooth Classic)
 - [ ] Prototype I-Bus on ESP32 TWAI @ 47.619 kbps with an SN65HVD230/TJA1051 transceiver
