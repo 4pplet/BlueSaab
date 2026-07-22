@@ -17,6 +17,7 @@
 
 #include "Bluetooth.h"
 #include "SerialLog.h"
+#include "SaabCan.h"
 
 Bluetooth bluetooth;
 
@@ -123,6 +124,10 @@ void Bluetooth::handleDebugChar(char c) {
 			resetPdl();
 			getLog()->log("Resetting PDL\r\n");
 			break;
+		case 'E':
+			getLog()->log("CAN TX errors: %d\r\n", saabCan.getTxErrors());
+			getLog()->log("CAN TX dropped (queue full): %d\r\n", saabCan.getTxDropped());
+			break;
 		case 'H':
 			getLog()->log("Commands:\r\n"
 				"V - Switch to discoverable mode\r\n"
@@ -136,7 +141,8 @@ void Bluetooth::handleDebugChar(char c) {
 				"B - Reboot the RN52 module\r\n"
 				"H - Show this list of commands\r\n"
 				"d - Get RN52 details\r\n"
-				"u - Reset PDL (Paired Devices List)\r\n");
+				"u - Reset PDL (Paired Devices List)\r\n"
+				"E - Show CAN TX error/drop counters\r\n");
 			break;
 		default:
 			break;

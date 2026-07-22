@@ -67,8 +67,8 @@ void RN52::initialize() {
 	queueCommand(RN52_SET_IDLE_TIMEOUT);
 	queueCommand(RN52_SET_PAIRING_TIMEOUT);
 	reboot();
+	getLog()->log("RN52 configuration commands queued, rebooting module...\r\n");
 	Thread::wait(5000);
-	getLog()->log("RN52 configuration completed!\r\n");
 
 	queueCommand(RN52_CMD_VERSION);
 

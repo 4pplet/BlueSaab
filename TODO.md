@@ -62,8 +62,14 @@ Tier 3 — fixes:
 
 Audit fixes shipped in **v6.1.3**: scroll-seam separator (A2), dead
 sendCanMessage overloads removed (A3), Mail::alloc NULL checks (A4),
-lowercase-hex decode (A6). Still open: A1 ISR-locking (bundle with future
-SID work), A5 TX error counters.
+lowercase-hex decode (A6).
+
+Shipped in **v6.1.4**: SID text moved out of the CAN ISR onto the
+SidResource thread — the locking now actually works (A1, likely the
+long-reported flicker); all 0x6A2 node-status replies consolidated into one
+sender thread so sequences can't interleave (B1, 9-5 handshake hardening);
+CAN TX error/drop counters on debug `E` (A5); truthful RN52 init log (B3).
+All v6.1.2–6.1.4 changes still need their first bench test.
 
 Out of scope for v6.2: config system, shuffle, multi-device (RN52 can't).
 (Track metadata on SID turned out to already exist — see docs/V6_CODE_AUDIT.md.)

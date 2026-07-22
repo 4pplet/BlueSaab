@@ -45,9 +45,49 @@ unsigned char cdcPowerdownCmd[NODE_STATUS_TX_MSG_SIZE][8] = {
 
 unsigned char soundCmd[] = {0x80,0x04,0x00,0x00,0x00,0x00,0x00,0x00};
 
-MessageSender cdcPoweronCmdSender(0x4, NODE_STATUS_TX_CDC,cdcPoweronCmd, 4, NODE_STATUS_TX_INTERVAL);
-MessageSender cdcActiveCmdSender(0x1, NODE_STATUS_TX_CDC, cdcActiveCmd, 4, NODE_STATUS_TX_INTERVAL);
-MessageSender cdcPowerdownCmdSender(0x8, NODE_STATUS_TX_CDC, cdcPowerdownCmd, 4, NODE_STATUS_TX_INTERVAL);
+/*
+ * All three node-status reply sequences share frame ID 0x6A2, so they must
+ * go through ONE thread: with a sender thread per sequence (as before
+ * v6.1.4), two IHU state flips in quick succession could interleave two
+ * sequences on the bus - violating the >=10 ms same-ID spacing rule and
+ * scrambling the reply order the 9-5 IHU is strict about.
+ */
+class NodeStatusSender {
+	Thread thread;
+
+	void run() {
+		while (1) {
+			osEvent evt = Thread::signal_wait(0); // wait for any request flag
+			if (evt.status != osEventSignal)
+				continue;
+			int32_t sig = evt.value.signals;
+			const unsigned char (*frames)[8];
+			if (sig & 0x8)
+				frames = cdcPowerdownCmd;
+			else if (sig & 0x1)
+				frames = cdcActiveCmd;
+			else if (sig & 0x4)
+				frames = cdcPoweronCmd;
+			else
+				continue;
+			for (int i = 0; i < NODE_STATUS_TX_MSG_SIZE; i++) {
+				if (i > 0)
+					Thread::wait(NODE_STATUS_TX_INTERVAL);
+				saabCan.sendCanFrame(NODE_STATUS_TX_CDC, frames[i]);
+			}
+		}
+	}
+
+public:
+	NodeStatusSender(): thread(osPriorityNormal, 256) {
+		thread.start(callback(this, &NodeStatusSender::run));
+	}
+	void send(int32_t signal) {
+		thread.signal_set(signal);
+	}
+};
+
+NodeStatusSender nodeStatusSender;
 
 void CDCStatus::initialize() {
 	saabCan.attach(NODE_STATUS_RX_IHU, callback(this, &CDCStatus::onIhuStatusFrame));
@@ -99,13 +139,13 @@ void CDCStatus::onIhuStatusFrame(CANMessage& frame) {
 
 	switch (frame.data[3] & 0x0F) {
 	case (0x3):
-		cdcPoweronCmdSender.send();
+		nodeStatusSender.send(0x4);
 		break;
 	case (0x2):
-		cdcActiveCmdSender.send();
+		nodeStatusSender.send(0x1);
 		break;
 	case (0x8):
-		cdcPowerdownCmdSender.send();
+		nodeStatusSender.send(0x8);
 		break;
 	}
 }

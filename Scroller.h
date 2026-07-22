@@ -66,12 +66,14 @@ public:
 class Scroller {
 	StringBuffer buffer;
 
-	// These are set from the Bluetooth thread, and used from CAN ISR. So they need protection.
+	// Set from the Bluetooth thread, read from the SidResource thread
+	// (since v6.1.4 get() is no longer called from the CAN ISR, so the
+	// semaphore is actually taken now - it silently failed in ISR context).
 	char title[TITLE_BUF_SIZE];
 	char text[ARTIST_BUF_SIZE + 3 + TITLE_BUF_SIZE + 3 + 1];
 	int position;
 	int text_len;
-	Semaphore info_lock; // mbed docs say a mutex cannot be used in ISRs, so we'll use a semaphore
+	Semaphore info_lock;
 
 public:
 	Scroller();

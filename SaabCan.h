@@ -52,7 +52,7 @@
  */
 
 #define MODULE_NAME					"BlueSaab v6"
-#define FIRMWARE_VERSION			"6.1.3"
+#define FIRMWARE_VERSION			"6.1.4"
 
 // Set to 0 to suppress the SID beep on entering CDC mode (recommended for
 // 9-5s if chasing warning-light issues - see docs/SAAB_9-5_NOTES.md)
@@ -71,10 +71,14 @@ class SaabCan {
 	Mail <CANMessage, 16> canFrameQueue;
 	FrameCallback callBacks[CAN_MAX_CALLBACKS];
 	Thread send_thread;
+	volatile unsigned txErrors;
+	volatile unsigned txDropped;
 
 	void sendFunc();
 public:
-	SaabCan(): send_thread(osPriorityNormal, 256) {}
+	SaabCan(): send_thread(osPriorityNormal, 256), txErrors(0), txDropped(0) {}
+	unsigned getTxErrors() { return txErrors; }
+	unsigned getTxDropped() { return txDropped; }
 	void initialize(int hz);
 	void sendCanFrame(int canId, const unsigned char *data);
 	void onRx();

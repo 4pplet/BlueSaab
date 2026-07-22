@@ -119,9 +119,18 @@ unused; ~25 mA constant draw is inherent to this firmware.
 - [ ] RN52 module firmware version (`d`): ___
 - [ ] Metadata behavior on track change: ___
 
-## Recommended policy (v6 frozen)
+## Fix status
 
-Nothing here forces a v6 release. If one ever happens anyway, the
-worth-taking fixes are **A2** (one line), **A4** (three NULL checks), and
-**A1** if SID flicker is a complaint — plus deleting A3. Everything else is
-primarily a **successor port checklist**: don't copy A1/A3/B1/B6 patterns.
+- **Fixed in v6.1.3:** A2 (scroll seam), A3 (dead overloads deleted),
+  A4 (Mail::alloc NULL checks), A6 (lowercase hex).
+- **Fixed in v6.1.4:** A1 (SID text formatting moved from CAN ISR to the
+  SidResource thread; locking now effective), B1 (single sender thread for
+  all 0x6A2 sequences), A5 (TX error/drop counters, debug `E`), B3
+  (truthful init log). SidResource stack bumped 256→384 (B4 partial).
+- **Open:** B2 (attach() silent overflow), B4 (stack monitoring in other
+  threads), B5 (title[] scratch reuse), B6 (remaining ISR-context frame
+  callbacks — Buttons/CDCStatus handlers still run in the RX interrupt;
+  they only queue/signal, which is ISR-safe, but the successor should
+  dispatch to a task regardless).
+- Bench validation of all of the above: pending (v6.1.2–6.1.4 have not yet
+  touched hardware).

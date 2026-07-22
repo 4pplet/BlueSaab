@@ -33,7 +33,7 @@ SidResource sidResource;
 
 SidResource::SidResource():
 		textSender(0x20, NODE_WRITE_TEXT_ON_DISPLAY, sidMessageGroup, 3, 10),
-		thread(osPriorityNormal, 256)
+		thread(osPriorityNormal, 384)
 {
 	sidDriverBreakthroughNeeded = false;
 	sidWriteAccessWanted = false;
@@ -59,17 +59,48 @@ void SidResource::initialize() {
 //	getLog()->registerThread("SidResource::run", &thread);
 }
 
+/*
+ * Signals: 0x10 = driver breakthrough requested, 0x20 = SID granted us the
+ * display. All text assembly and sending happens on this thread - the CAN
+ * RX interrupt only sets signals. (Before v6.1.4 the text was formatted in
+ * the ISR, where the scroller's semaphore silently cannot be taken - a
+ * likely cause of the long-reported SID text corruption/flicker.)
+ */
 void SidResource::run() {
-//	getLog()->log("SidResource::run()\r\n");
-
 	while(1) {
 		sendDisplayRequest();
 		sidDriverBreakthroughNeeded = false;
-		Thread::wait(100);
-		osEvent result = Thread::signal_wait(0x10, NODE_UPDATE_BASETIME-100);
-		if (result.status == osEventSignal) {
+
+		uint32_t start = us_ticker_read();
+		int32_t remaining = NODE_UPDATE_BASETIME;
+		while (remaining > 0) {
+			osEvent result = Thread::signal_wait(0, remaining);
+			if (result.status != osEventSignal)
+				break; // timeout: re-request on the 1 s schedule
+			if (result.value.signals & 0x20)
+				writeGrantedText();
+			if (result.value.signals & 0x10) {
+				// Driver breakthrough: re-request promptly, but keep the
+				// original >=100 ms spacing between our 0x357 requests.
+				uint32_t elapsed_ms = (us_ticker_read() - start) / 1000;
+				if (elapsed_ms < 100)
+					Thread::wait(100 - elapsed_ms);
+				break;
+			}
+			remaining = NODE_UPDATE_BASETIME - (int32_t)((us_ticker_read() - start) / 1000);
 		}
 	}
+}
+
+void SidResource::writeGrantedText() {
+	if (tempGrants > 0) {
+		tempGrants--;
+		formatTextMessage(tempText, writeTextOnDisplayUpdateNeeded);
+	} else {
+		const char *buffer = scroller.get();
+		formatTextMessage(buffer[0] ? buffer : MODULE_NAME, writeTextOnDisplayUpdateNeeded);
+	}
+	textSender.send();
 }
 
 /**
@@ -108,17 +139,10 @@ void SidResource::showTemporary(const char *text, int grants) {
 }
 
 void SidResource::grantReceived(CANMessage& frame) {
+	// ISR context: just signal the thread, which formats and sends.
 	if (sidWriteAccessWanted) {
 		if ((frame.data[0] == 0x02) && (frame.data[1] == NODE_SID_FUNCTION_ID)) {
-			// We have been granted write access on 2nd row of SID
-			if (tempGrants > 0) {
-				tempGrants--;
-				formatTextMessage(tempText, writeTextOnDisplayUpdateNeeded);
-			} else {
-				const char *buffer = scroller.get();
-				formatTextMessage(buffer[0] ? buffer : MODULE_NAME, writeTextOnDisplayUpdateNeeded);
-			}
-			textSender.send();
+			thread.signal_set(0x20);
 		}
 	}
 }

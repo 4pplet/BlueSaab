@@ -41,6 +41,7 @@ class SidResource {
 	void run();
 
 	void sendDisplayRequest();
+	void writeGrantedText();
 	void formatTextMessage(const char textIn[], bool event);
 public:
 	SidResource();
