@@ -122,12 +122,32 @@ behavior must be indistinguishable from v6.1.1 (see requirement above) —
 [USAGE_v6.md](USAGE_v6.md) doubles as the test checklist. PCB in KiCad so the
 hardware is as open as the code.
 
+## What carries over from the v6 schematic
+
+Sheet-by-sheet review of `HARDWARE/BlueSaab_v6.PDF` (8 schematic sheets):
+
+| v6 sheet | What it is | Successor |
+| --- | --- | --- |
+| Amplifier | THS4522 differential line driver, gain ≈2 (2k/1k), 0.22 µF filtering, 100 Ω series outputs | **Reuse as-is.** The head unit's CDC audio input is *differential* (L±/R± on the connector) — the PCM5102A is single-ended, so this stage is still required. Proven part, still in production |
+| CANBUS | SN65HVD234 transceiver + NUP2105L bus ESD protector + 68 k bias resistor | **Reuse as-is** (drives from ESP32 TWAI instead of STM32 bxCAN) |
+| Connectors | TE 827229-1 24-pin CDC connector — 12 V (pin 6), GND (12), CAN H/L (11/5), R± (7/2), L± (8/3); reverse-polarity diode; FTDI + USB power OR-ing | **Keep connector + pinout** — this is what makes the successor a drop-in install. Debug connectors can modernize |
+| Mic | Header + bias + slide switch feeding the RN52's mic inputs (hands-free option) | **Open decision.** ESP32 can do HFP but needs an I2S mic/ADC path; defer to post-v1 unless demanded |
+| Power | LM1117 3.3 V **linear** regulator straight from car 12 V | **Must be redesigned.** Fine for ~100 mA of STM32+RN52; the ESP32's ~500 mA radio bursts would dissipate >4 W linearly. Use an automotive buck (TPS54202/AP63203-class) + load-dump TVS (which v6 never had — only a series diode) |
+| Microprocessor | STM32F103, 8 MHz resonator, JTAG, BOOT0/RESET buttons | Replaced by the ESP32 module |
+| RN52 | Module wiring, status LEDs (RGB driven by RN52 + heartbeat) | Replaced by ESP32; keep equivalent status LEDs |
+
+Net effect: the successor board is the v6 **audio output stage and CAN front
+end unchanged**, wrapped around one ESP32 + I2S DAC + buck converter instead
+of two chips and a linear regulator.
+
 Open decisions:
 
 - [ ] Project name (it's a spiritual successor, not "BlueSaab v7" — or is it?)
 - [ ] Multi-device swap UX: cycle on preset 3 vs. device slots on presets 2/4/5
       vs. both; SID name display; whether an idle unit auto-accepts any known
       phone (true multipoint is likely out — ESP32 handles one A2DP stream)
+- [ ] Hands-free/mic support (v6 had an optional mic header; needs ESP32 HFP
+      plus an I2S mic path — defer to post-v1?)
 - [ ] SBC-only (simple, universal) vs. chasing AAC via ESP-ADF
 - [ ] Reuse the v6 enclosure/connector footprint or shrink the board
 - [ ] Wi-Fi config/OTA in scope for the first release or later
