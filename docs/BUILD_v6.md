@@ -33,7 +33,9 @@ footprint at v6.1.1: **103 KB flash** (of 128 KB), **~10 KB static RAM**
 
 ## Flash
 
-Two options, both on the board's headers:
+Full step-by-step (hookup, backup, bootloader dance, verification):
+**[FLASHING_v6_HOWTO.md](FLASHING_v6_HOWTO.md)**. Summary — two options,
+both on the board's headers:
 
 - **SWD/JTAG**: 10-pin 1.27 mm Cortex debug header; an ST-Link (or the
   ST-Link half of a Nucleo-F103RB board). With OpenOCD:

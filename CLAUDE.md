@@ -42,7 +42,8 @@ RN52, `H` help.
 
 - `README.md` — project front door; `LICENSE` — GPL-3
 - `docs/USAGE_v6.md` — v6 user manual (button map is the successor's interface contract)
-- `docs/BUILD_v6.md` — building/flashing v6
+- `docs/BUILD_v6.md` — building/flashing v6 (verified toolchain: ARM GCC 8.5)
+- `docs/FLASHING_v6_HOWTO.md` — step-by-step flash guide (SWD + serial bootloader)
 - `docs/IBUS_PROTOCOL.md` — the I-Bus CDC protocol spec (canonical upstream source is dead; this is the capture)
 - `docs/SUCCESSOR_HARDWARE_OPTIONS.md` — successor design + decisions
 - `docs/SUCCESSOR_PARTSLIST.md` — block-by-block parts list, keyed to v6 designators
