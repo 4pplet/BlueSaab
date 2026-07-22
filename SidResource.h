@@ -31,6 +31,9 @@ class SidResource {
 	bool sidDriverBreakthroughNeeded;
 	bool sidWriteAccessWanted;
 
+	char tempText[13];
+	volatile int tempGrants;
+
 	bool writeTextOnDisplayUpdateNeeded;
 
 	Thread thread;
@@ -44,6 +47,9 @@ public:
 	~SidResource();
 
 	void initialize();
+	// Show a fixed text (max 12 chars) for the next 'grants' display grants
+	// (roughly one grant per second) instead of the scroller content.
+	void showTemporary(const char *text, int grants);
 	void requestDriverBreakthrough() {
 		sidDriverBreakthroughNeeded = true;
 		thread.signal_set(0x10);

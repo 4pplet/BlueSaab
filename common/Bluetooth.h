@@ -30,6 +30,7 @@ class Bluetooth {
 
 public:
 	void initialize();
+	const char *getRN52Version() { return rn52.getVersion(); }
 	void play();
 	void prev();
 	void next();

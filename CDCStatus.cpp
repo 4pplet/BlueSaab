@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 #include "CDCStatus.h"
 #include "SaabCan.h"
 #include "MessageSender.h"
@@ -62,6 +63,12 @@ void CDCStatus::onCDCControlFrame(CANMessage& frame) {
 		case 0x24:
 			cdcActive = true;
 			#if SID_TEXT_CONTROL_ENABLED
+				{
+					// Show firmware + RN52 versions for a few seconds, e.g. "6.1.2 R1.16"
+					char verText[13];
+					snprintf(verText, sizeof(verText), FIRMWARE_VERSION " R%s", bluetooth.getRN52Version());
+					sidResource.showTemporary(verText, 4);
+				}
 				sidResource.activate();
 			#endif
 			saabCan.sendCanFrame(SOUND_REQUEST, soundCmd);

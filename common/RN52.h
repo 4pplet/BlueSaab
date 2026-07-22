@@ -36,6 +36,7 @@ class RN52 {
 	DigitalOut bt_cmd_pin;
 	DigitalOut bt_pwren_pin;
 	InterruptIn bt_event_pin;
+	char version[8];
 
 	int queueCommand(const char *cmd);
 	void onA2DPProfileChange(bool connected);
@@ -56,8 +57,12 @@ public:
 		, bt_cmd_pin(PA_7)
 		, bt_pwren_pin(PC_8)
 		, bt_event_pin(PB_0)
-	{}
+	{
+		version[0] = '?';
+		version[1] = 0;
+	}
 	void initialize();
+	const char *getVersion() { return version; }
 	void sendAVCRP(AVCRP cmd);
 
 	void reconnectLast();

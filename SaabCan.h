@@ -52,6 +52,7 @@
  */
 
 #define MODULE_NAME					"BlueSaab v6"
+#define FIRMWARE_VERSION			"6.1.2"
 #define LAST_EVENT_IN_TIMEOUT		3000 		    // Milliseconds
 #define NODE_STATUS_TX_MSG_SIZE		4 			    // Decimal; defines how many frames do we need to reply with to '6A1'
 

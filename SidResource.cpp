@@ -38,6 +38,8 @@ SidResource::SidResource():
 	sidDriverBreakthroughNeeded = false;
 	sidWriteAccessWanted = false;
 	writeTextOnDisplayUpdateNeeded = false;
+	tempText[0] = 0;
+	tempGrants = 0;
 
 	// Fill in some default values
 	memcpy(sidMessageGroup[0],"\x42\x96\x02" "BlueS",sizeof(sidMessageGroup[0]));
@@ -98,12 +100,23 @@ void SidResource::sendDisplayRequest() {
 	saabCan.sendCanFrame(NODE_DISPLAY_RESOURCE_REQ, displayRequestCmd);
 }
 
+void SidResource::showTemporary(const char *text, int grants) {
+	strncpy(tempText, text, sizeof(tempText) - 1);
+	tempText[sizeof(tempText) - 1] = 0;
+	tempGrants = grants;
+}
+
 void SidResource::grantReceived(CANMessage& frame) {
 	if (sidWriteAccessWanted) {
 		if ((frame.data[0] == 0x02) && (frame.data[1] == NODE_SID_FUNCTION_ID)) {
 			// We have been granted write access on 2nd row of SID
-			const char *buffer = scroller.get();
-			formatTextMessage(buffer[0] ? buffer : MODULE_NAME, writeTextOnDisplayUpdateNeeded);
+			if (tempGrants > 0) {
+				tempGrants--;
+				formatTextMessage(tempText, writeTextOnDisplayUpdateNeeded);
+			} else {
+				const char *buffer = scroller.get();
+				formatTextMessage(buffer[0] ? buffer : MODULE_NAME, writeTextOnDisplayUpdateNeeded);
+			}
 			textSender.send();
 		}
 	}

@@ -65,6 +65,8 @@ void RN52::initialize() {
 	Thread::wait(5000);
 	getLog()->log("RN52 configuration completed!\r\n");
 
+	queueCommand(RN52_CMD_VERSION);
+
 	bt_event_pin.fall(callback(this, &RN52::onGPIO2));
 }
 
@@ -141,6 +143,27 @@ void RN52::processCommand(const char *cmd) {
 				//getLog()->log("details response %d lines\r\n", lines);
 				break;
 			}
+		}
+	} else if (isCmd(cmd, RN52_CMD_VERSION)) { // Gather version until timeout
+		while (true) {
+			RXEntry* gotBuf = serialRX.waitForRXLine(100);
+			if (!gotBuf)
+				break;
+			// Response contains something like "Ver 1.16" - find the first
+			// digit.digit pattern and keep it (e.g. "1.16")
+			if (version[0] == '?') {
+				for (const char *p = gotBuf->buf; *p; p++) {
+					if (isdigit(p[0]) && p[1] == '.' && isdigit(p[2])) {
+						unsigned i = 0;
+						while (i < sizeof(version) - 1 && (isdigit(*p) || *p == '.')) {
+							version[i++] = *p++;
+						}
+						version[i] = 0;
+						break;
+					}
+				}
+			}
+			serialRX.free(gotBuf);
 		}
 	} else if (isCmd(cmd, RN52_CMD_QUERY)) {
 		RXEntry* gotBuf = serialRX.waitForRXLine(500);
