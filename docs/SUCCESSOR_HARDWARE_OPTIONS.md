@@ -131,7 +131,10 @@ infinitely hackable, all open.
 
 Firmware plan: port `SaabCan`/`CDCStatus`/`Buttons`/`SidResource` protocol
 logic (platform-independent) onto ESP-IDF + TWAI; replace the whole
-`common/RN52*` layer with ESP-IDF's A2DP sink + AVRCP APIs. The in-car
+`common/RN52*` layer with ESP-IDF's A2DP sink + AVRCP APIs. **Watchdog
+(ESP-IDF task WDT) mandatory from day one** — always-powered device, no
+reachable reset; v6 shipped for years without one (gap found 2026-07-22,
+see V6_CODE_AUDIT.md). The in-car
 behavior must be indistinguishable from v6.1.1 (see requirement above) —
 [USAGE_v6.md](USAGE_v6.md) doubles as the test checklist. PCB in KiCad so the
 hardware is as open as the code.
