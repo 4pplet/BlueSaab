@@ -94,6 +94,7 @@ Single-character commands (no Enter needed):
 | `B` | Reboot the RN52 module |
 | `d` | Print RN52 details (firmware version, config) |
 | `u` | Reset the RN52 paired device list (PDL) — forgets all phones |
+| `E` | CAN health: TX failures/drops, RX overruns, live REC/TEC error counters, ESR (bus-off/error-passive flags) |
 | `H` | Help — list commands |
 
 ### Bench validation recipe

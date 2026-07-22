@@ -24,7 +24,9 @@ since ≤6.1.1 unless noted.
 - Fixed: `%` in a track title could crash the log thread via the debug `d`
   command (deferred format-string misuse)
 - Fixed: silent RN52-command drops and CAN RX FIFO overruns — now counted;
-  debug `E` shows TX errors, TX drops, RX overruns
+  debug `E` shows TX failures/drops, RX overruns, plus the live bxCAN
+  REC/TEC error counters and ESR flags (bus-off/error-passive) — one
+  keypress measures bus health during validation
 - Fixed: CDC status byte-0 encoding wrong for 2 of 4 event/remote cases
   (latent); SID text group seam/tear pacing; atomic breakthrough flag;
   breakthrough only on recognized buttons; bounded RN52 response loops;
@@ -76,4 +78,5 @@ Quality-of-life features (all additive) + first audit fixes:
 ## 6.1.1 (2019) — released
 
 Last firmware of the original development era. Reproducible-build binaries
-published 2026-07-22: https://github.com/4pplet/BlueSaab/releases/tag/v6.1.1
+published 2026-07-22:
+[github.com/4pplet/BlueSaab/releases/tag/v6.1.1](https://github.com/4pplet/BlueSaab/releases/tag/v6.1.1)

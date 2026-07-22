@@ -79,6 +79,10 @@ public:
 	SaabCan(): send_thread(osPriorityNormal, 256), txErrors(0), txDropped(0) {}
 	unsigned getTxErrors() { return txErrors; }
 	unsigned getTxDropped() { return txDropped; }
+	// Live bxCAN error state (read-only register reads, ISR-safe)
+	unsigned getRxErrorCounter();
+	unsigned getTxErrorCounter();
+	uint32_t getESR();
 	void initialize(int hz);
 	void sendCanFrame(int canId, const unsigned char *data);
 	void onRx();

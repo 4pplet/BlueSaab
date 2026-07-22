@@ -127,9 +127,12 @@ void Bluetooth::handleDebugChar(char c) {
 			getLog()->log("Resetting PDL\r\n");
 			break;
 		case 'E':
-			getLog()->log("CAN TX errors: %d\r\n", saabCan.getTxErrors());
+			getLog()->log("CAN TX write failures: %d\r\n", saabCan.getTxErrors());
 			getLog()->log("CAN TX dropped (queue full): %d\r\n", saabCan.getTxDropped());
 			getLog()->log("CAN RX FIFO overruns: %d\r\n", can_get_rx_overruns());
+			getLog()->log("CAN RX error counter (REC): %d\r\n", saabCan.getRxErrorCounter());
+			getLog()->log("CAN TX error counter (TEC): %d\r\n", saabCan.getTxErrorCounter());
+			getLog()->log("CAN ESR: %08x (bit0 warn, bit1 err-passive, bit2 bus-off)\r\n", saabCan.getESR());
 			break;
 		case 'H':
 			getLog()->log("Commands:\r\n"

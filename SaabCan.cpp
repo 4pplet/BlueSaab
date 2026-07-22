@@ -92,6 +92,18 @@ void SaabCan::sendFunc() {
 	}
 }
 
+unsigned SaabCan::getRxErrorCounter() {
+	return iBus.rderror();
+}
+
+unsigned SaabCan::getTxErrorCounter() {
+	return iBus.tderror();
+}
+
+uint32_t SaabCan::getESR() {
+	return iBus.read_ESR();
+}
+
 void SaabCan::attach(unsigned int canId, Callback<void(CANMessage&)> callBack) {
 	for (int i = 0; i < CAN_MAX_CALLBACKS; i++) {
 		if (callBacks[i].id == 0) {
