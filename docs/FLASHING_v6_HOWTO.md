@@ -1,9 +1,10 @@
 # Flashing the BlueSaab v6 — howto
 
-Two supported paths. If you own an ST-Link (or any Nucleo board), use
-Method A — it can back up the unit first and is the most robust. If you only
-have a USB-serial adapter, Method B works with zero extra hardware beyond
-what the debug console already needs.
+Two supported paths. **Method A (serial bootloader) is the primary way —
+it's how v6 units have historically been flashed** and needs nothing but a
+USB-serial adapter. Method B (SWD/ST-Link) is the power-user alternative:
+worth setting up if you want on-chip debugging or belt-and-braces
+backup/restore.
 
 The MicroUSB port is **not** a flashing path — the STM32F103's ROM bootloader
 is serial-only (no USB DFU). Don't try.
@@ -11,7 +12,27 @@ is serial-only (no USB DFU). Don't try.
 Get a firmware binary first: build it per [BUILD_v6.md](BUILD_v6.md)
 (`BUILD/BlueSaab.bin` / `.elf`).
 
-## Method A — SWD with an ST-Link (recommended)
+## Method A — ROM serial bootloader (primary, historically used)
+
+**Hardware:** any 3.3 V-logic USB-serial adapter on the **FTDI header**
+(6-pin, standard FTDI cable pinout — black end = GND; the header can power
+the board from the cable's 5 V). The board's BOOT0 and RESET push-buttons do
+the bootloader dance; no soldering.
+
+**Software:** `stm32flash` (`brew install stm32flash`).
+
+```sh
+# Enter the ROM bootloader: hold BOOT0, press+release RESET, release BOOT0.
+# Then (adjust the serial device name):
+stm32flash -r backup_v6_unit.bin /dev/tty.usbserial-XXXX   # backup (optional)
+stm32flash -w BUILD/BlueSaab.bin -v /dev/tty.usbserial-XXXX # write + verify
+# Press RESET to run the new firmware.
+```
+
+Note: the ROM bootloader talks on **USART1**, which is what the FTDI header
+carries (the UART2 header is the debug console — wrong port for flashing).
+
+## Method B — SWD with an ST-Link (debugging + robust backup)
 
 **Hardware:** ST-Link v2 (clone dongles are fine) or the ST-Link end of any
 Nucleo board (remove its jumpers to use it as a standalone probe), plus a
@@ -40,26 +61,6 @@ Restore the backup later, if ever needed:
 openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
         -c "program backup_v6_unit.bin 0x08000000 verify reset exit"
 ```
-
-## Method B — ROM serial bootloader (no probe needed)
-
-**Hardware:** any 3.3 V-logic USB-serial adapter on the **FTDI header**
-(6-pin, standard FTDI cable pinout — black end = GND; the header can power
-the board from the cable's 5 V). The board's BOOT0 and RESET push-buttons do
-the bootloader dance; no soldering.
-
-**Software:** `stm32flash` (`brew install stm32flash`).
-
-```sh
-# Enter the ROM bootloader: hold BOOT0, press+release RESET, release BOOT0.
-# Then (adjust the serial device name):
-stm32flash -r backup_v6_unit.bin /dev/tty.usbserial-XXXX   # backup (optional)
-stm32flash -w BUILD/BlueSaab.bin -v /dev/tty.usbserial-XXXX # write + verify
-# Press RESET to run the new firmware.
-```
-
-Note: the ROM bootloader talks on **USART1**, which is what the FTDI header
-carries (the UART2 header is the debug console — wrong port for flashing).
 
 ## Verify after flashing (either method)
 
