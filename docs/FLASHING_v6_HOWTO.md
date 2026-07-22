@@ -71,6 +71,26 @@ openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
 4. Send `V` — unit should appear as "BlueSaab" on a phone.
 5. Only then reinstall in the car.
 
+## RN52 module firmware (DFU) — only if metadata is wanted
+
+If the RN52 reports firmware < 1.16 (`d` on the debug console), SID track
+metadata cannot work (`AD` command added in 1.16); everything else is
+unaffected. Upgrading is optional and carries brick risk on an EOL module —
+decide deliberately.
+
+The board anticipates it: the RN52's GPIO3 is netted as `DFU_PIN` in the
+schematic, and the **UART3 header** exposes the RN52's UART directly.
+Rough procedure (UNVERIFIED on this board):
+
+1. Obtain the RN52 1.16 `.dfu` image (Microchip; EOL part — may require
+   archive digging) and Microchip's `ISUpdate.exe` (Windows).
+2. Hold the STM32 in reset so it releases the RN52 UART.
+3. USB-serial (3.3 V) on the UART3 header; assert the DFU pin; power-cycle.
+4. Run ISUpdate, flash, power-cycle, verify with `d` → 1.16.
+
+TODO before attempting: locate where `DFU_PIN` lands physically on the v6
+board (test point/jumper — schematic shows the net, not the destination).
+
 ## Troubleshooting / open unknowns
 
 - **OpenOCD can't connect:** check SWDIO/SWCLK aren't swapped; make sure the
