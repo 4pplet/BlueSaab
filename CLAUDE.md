@@ -55,9 +55,12 @@ RN52, `H` help.
 
 ## Project direction
 
-See `TODO.md`. Short version: v6 (STM32+RN52) stays as-is — **minimal effort
-policy**: diagnosis and docs only; no firmware releases, no RN52 DFU, no
-hardware work unless something in the field actually breaks. All effort goes to the ESP32 spiritual
+See `TODO.md`. Short version: v6 **hardware** is frozen (RN52 EOL) and RN52
+module firmware updates are avoided (brick risk, metadata-only benefit) —
+but v6 **STM32 firmware** improvement resumed 2026-07 (v6.1.2+): small QOL
+items from the TODO menu, built/released via GitHub Actions CI (see
+`docs/BUILD_v6.md` release process). The ESP32 successor remains the main
+track and must not be delayed by v6 work. All effort goes to the ESP32 spiritual
 successor (A2DP sink + built-in TWAI CAN, `docs/SUCCESSOR_HARDWARE_OPTIONS.md`),
 whose primary purpose is production continuity: the RN52 is EOL, so v6 can no
 longer be manufactured. Ship a buildable v6-equivalent first; features second. Hard requirement:

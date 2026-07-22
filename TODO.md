@@ -19,13 +19,12 @@ built-in CAN.
 
 ## Phase 1 — Keep v6 alive
 
-### v6.2 firmware — QOL release (ON HOLD, 2026-07-22)
+### v6.x firmware — QOL improvements (RESUMED 2026-07-22)
 
-**Deferred unless a concrete need arises** — v6 works well enough, and effort
-goes to the successor, whose main purpose is production continuity (the RN52
-is EOL and unobtainable; v6 cannot be manufactured anymore). The tiers below
-are kept as a menu should a v6 firmware release ever be warranted; all are
-additive and gated on build verification.
+Firmware improvement is active again: v6.1.2 (version display) implemented,
+CI builds every push. Pick items from the tiers below as wanted — all
+additive, bench-test before each release (process in `docs/BUILD_v6.md`).
+The successor remains the priority; v6 work must not delay it.
 
 Tier 0 — support/diagnostics (the one candidate worth bending the freeze for):
 

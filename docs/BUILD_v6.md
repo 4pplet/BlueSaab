@@ -62,6 +62,29 @@ both on the board's headers:
 UART2 header (PA2/PA3), **115200 8N1** — boot banner plus single-character
 commands (see [USAGE_v6.md](USAGE_v6.md#debug-serial-console)).
 
+## CI and release process
+
+Every push builds in GitHub Actions (`.github/workflows/build.yml`, pinned
+GCC 8-2019-q3) and uploads `.bin`/`.hex`/`.elf` artifacts. CLI driving:
+
+```sh
+gh workflow run build --ref <branch>   # manual trigger (pushes auto-build)
+gh run watch                           # follow progress
+gh run download -n BlueSaab-firmware   # fetch built binaries
+```
+
+Releasing a firmware version:
+
+1. Bump `FIRMWARE_VERSION` in `SaabCan.h` (single source of truth — feeds
+   the boot banner and the SID version display).
+2. Push; wait for CI green; **bench-test the CI artifact on real hardware**
+   (serial console + phone, per FLASHING_v6_HOWTO.md verification).
+3. Tag (`git tag v6.x.y && git push --tags`), then
+   `gh release create v6.x.y <files> --title ... --notes ...` attaching the
+   **CI-built** binaries with their SHA-256 sums — CI is the canonical
+   toolchain for releases (local Homebrew GCC 8.5 produces different, also
+   valid, binaries; don't mix them in one release).
+
 ## Compile-time options
 
 - `SID_TEXT_CONTROL_ENABLED` in [SidResource.h](../SidResource.h) — set to
