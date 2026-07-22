@@ -19,6 +19,8 @@
 #include "SerialLog.h"
 #include "SaabCan.h"
 
+extern "C" uint32_t can_get_rx_overruns(void);
+
 Bluetooth bluetooth;
 
 void Bluetooth::initialize() {
@@ -127,6 +129,7 @@ void Bluetooth::handleDebugChar(char c) {
 		case 'E':
 			getLog()->log("CAN TX errors: %d\r\n", saabCan.getTxErrors());
 			getLog()->log("CAN TX dropped (queue full): %d\r\n", saabCan.getTxDropped());
+			getLog()->log("CAN RX FIFO overruns: %d\r\n", can_get_rx_overruns());
 			break;
 		case 'H':
 			getLog()->log("Commands:\r\n"

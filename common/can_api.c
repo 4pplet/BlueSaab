@@ -28,6 +28,12 @@
 static CAN_HandleTypeDef CanHandle;
 static uint32_t can_irq_ids[CAN_NUM] = {0};
 static can_irq_handler irq_handler;
+static volatile uint32_t can_rx_overruns = 0;
+
+uint32_t can_get_rx_overruns(void)
+{
+    return can_rx_overruns;
+}
 
 void can_init(can_t *obj, PinName rd, PinName td)
 {
@@ -74,7 +80,11 @@ void can_init_freq (can_t *obj, PinName rd, PinName td, int hz)
     CanHandle.Init.AWUM = ENABLE;
     CanHandle.Init.NART = DISABLE;
     CanHandle.Init.RFLM = DISABLE;
-    CanHandle.Init.TXFP = DISABLE;
+    // TXFP=ENABLE: transmit mailboxes drain in FIFO (request) order. With
+    // TXFP=0, equal-ID frames pending in multiple mailboxes transmit by
+    // mailbox index, which can reorder our same-ID frame groups (3x 0x337
+    // SID text, 4x 0x6A2 node status) under bus load.
+    CanHandle.Init.TXFP = ENABLE;
     CanHandle.Init.Mode = CAN_MODE_NORMAL;
     CanHandle.Init.SJW = CAN_SJW_1TQ;
     CanHandle.Init.BS1 = CAN_BS1_6TQ;
@@ -281,6 +291,13 @@ int can_read(can_t *obj, CAN_Message *msg, int handle)
 
     CAN_TypeDef *can = (CAN_TypeDef *)(obj->can);
 
+    // Count and clear RX FIFO0 overruns (frames silently lost when the
+    // 3-deep FIFO fills faster than the ISR drains it).
+    if (can->RF0R & CAN_RF0R_FOVR0) {
+        can->RF0R |= CAN_RF0R_FOVR0; // write 1 to clear
+        can_rx_overruns++;
+    }
+
     // check FPM0 which holds the pending message count in FIFO 0
     // if no message is pending, return 0
     if ((can->RF0R & CAN_RF0R_FMP0) == 0) {
@@ -353,13 +370,27 @@ unsigned char can_tderror(can_t *obj)
     return (can->ESR >> 16) & 0xFF;
 }
 
+// Bounded wait for INAK to reach the wanted state. Leaving init mode needs
+// 11 recessive bits on the bus - a harness/transceiver fault holding the bus
+// dominant must degrade operation, not hang boot forever.
+static int can_wait_inak(CAN_TypeDef *can, int want_set)
+{
+    uint32_t n = 1000000;
+    while (n--) {
+        int set = ((can->MSR & CAN_MSR_INAK) == CAN_MSR_INAK);
+        if (set == want_set) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void can_monitor(can_t *obj, int silent)
 {
     CAN_TypeDef *can = (CAN_TypeDef *)(obj->can);
 
     can->MCR |= CAN_MCR_INRQ ;
-    while ((can->MSR & CAN_MSR_INAK) != CAN_MSR_INAK) {
-    }
+    can_wait_inak(can, 1);
 
     if (silent) {
         can->BTR |= ((uint32_t)1 << 31);
@@ -368,8 +399,7 @@ void can_monitor(can_t *obj, int silent)
     }
 
     can->MCR &= ~(uint32_t)CAN_MCR_INRQ;
-    while ((can->MSR & CAN_MSR_INAK) == CAN_MSR_INAK) {
-    }
+    can_wait_inak(can, 0);
 }
 
 int can_mode(can_t *obj, CanMode mode)
@@ -378,8 +408,7 @@ int can_mode(can_t *obj, CanMode mode)
     CAN_TypeDef *can = (CAN_TypeDef *)(obj->can);
 
     can->MCR |= CAN_MCR_INRQ ;
-    while ((can->MSR & CAN_MSR_INAK) != CAN_MSR_INAK) {
-    }
+    can_wait_inak(can, 1);
 
     switch (mode) {
         case MODE_NORMAL:
@@ -407,7 +436,8 @@ int can_mode(can_t *obj, CanMode mode)
     }
 
     can->MCR &= ~(uint32_t)CAN_MCR_INRQ;
-    while ((can->MSR & CAN_MSR_INAK) == CAN_MSR_INAK) {
+    if (!can_wait_inak(can, 0)) {
+        success = 0;
     }
 
     return success;

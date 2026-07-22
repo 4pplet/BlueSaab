@@ -19,7 +19,10 @@
 #include "rtos.h"
 #include "SaabCan.h"
 
-CAN iBus(PB_8, PB_9);
+// Construct at the real I-Bus bitrate: the default CAN() ctor would join
+// the live car bus at 100 kbit/s error-active during static init, actively
+// corrupting frames every ignition-on until initialize() fixed the rate.
+CAN iBus(PB_8, PB_9, 47619);
 CANMessage canRxFrame;
 SaabCan saabCan;
 
