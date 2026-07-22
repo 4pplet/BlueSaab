@@ -27,6 +27,13 @@ is EOL and unobtainable; v6 cannot be manufactured anymore). The tiers below
 are kept as a menu should a v6 firmware release ever be warranted; all are
 additive and gated on build verification.
 
+Tier 0 — support/diagnostics (the one candidate worth bending the freeze for):
+
+- [ ] Show BlueSaab fw + RN52 fw versions on the SID for ~3 s when entering
+      CDC mode (e.g. `BS 6.1.2 R1.16`) — makes every deployed unit
+      self-identifying without a serial console. Note: must trigger on CDC
+      activation, not boot — units are always-powered and boot ~never.
+
 Tier 1 — restore what users miss (driver support already exists):
 
 - [ ] Volume up/down on presets 4/5 (`AV+`/`AV-` already in RN52 driver)
