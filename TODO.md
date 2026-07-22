@@ -18,7 +18,13 @@ built-in CAN.
 
 ## Phase 1 — Keep v6 alive
 
-### v6.2 firmware — QOL release (all additive; gated on build verification)
+### v6.2 firmware — QOL release (ON HOLD, 2026-07-22)
+
+**Deferred unless a concrete need arises** — v6 works well enough, and effort
+goes to the successor, whose main purpose is production continuity (the RN52
+is EOL and unobtainable; v6 cannot be manufactured anymore). The tiers below
+are kept as a menu should a v6 firmware release ever be warranted; all are
+additive and gated on build verification.
 
 Tier 1 — restore what users miss (driver support already exists):
 

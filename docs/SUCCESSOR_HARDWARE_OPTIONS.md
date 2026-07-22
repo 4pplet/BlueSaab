@@ -4,6 +4,12 @@ The new device is a **spiritual successor to BlueSaab v6**: a fresh, fully
 open design that does the same job in the same cars, not an incremental v7 of
 the STM32+RN52 board. Working name TBD.
 
+**Primary purpose: production continuity.** The RN52 is EOL and unobtainable,
+so v6 boards cannot be built anymore — the successor exists first and
+foremost so BlueSaab can keep being produced. Feature improvements
+(multi-device, sleep, OTA) are secondary and must never delay a buildable,
+v6-equivalent device.
+
 > **DECISION (2026-07-22): Option A — single ESP32.** One chip for Bluetooth
 > audio, CAN, and application logic. Options B/C kept below for the record.
 >
