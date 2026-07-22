@@ -45,6 +45,7 @@ RN52, `H` help.
 - `docs/BUILD_v6.md` — building/flashing v6
 - `docs/IBUS_PROTOCOL.md` — the I-Bus CDC protocol spec (canonical upstream source is dead; this is the capture)
 - `docs/SUCCESSOR_HARDWARE_OPTIONS.md` — successor design + decisions
+- `docs/SUCCESSOR_PARTSLIST.md` — block-by-block parts list, keyed to v6 designators
 - `docs/SAAB_9-5_NOTES.md` — 9-5 research, model quirks
 - `docs/RELATED_PROJECTS.md` — lineage, competitors, 2006+ landscape
 - `HARDWARE/README.md` — board files

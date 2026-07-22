@@ -84,7 +84,8 @@ and app logic. **Target cars: pre-2006** (9-3 gen1 1998–2002/03, 9-5 gen1
       I-Bus frame logic is platform-independent and can largely be reused
 - [ ] Decide audio output path: ESP32 internal DAC is poor — external I2S DAC
       (e.g. PCM5102) for line-level output
-- [ ] Schematic + PCB in an open tool (KiCad) so the design files are truly OSS
+- [ ] Schematic + PCB in an open tool (KiCad) so the design files are truly
+      OSS — parts list ready in `docs/SUCCESSOR_PARTSLIST.md`
 - [ ] Power supply: 12 V automotive input (load-dump tolerant) → 3.3 V via
       low-quiescent buck (AP63203-class)
 - [ ] Sleep architecture: ESP32 deep sleep on I-Bus silence, wake on CAN RXD
