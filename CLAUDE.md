@@ -38,6 +38,18 @@ Single-char commands (see `Bluetooth::handleDebugChar`): `V` discoverable,
 `I` connectable, `C` reconnect, `D` disconnect, `P`/`N`/`R` playback, `B` reboot
 RN52, `H` help.
 
+## Documentation map
+
+- `README.md` — project front door; `LICENSE` — GPL-3
+- `docs/USAGE_v6.md` — v6 user manual (button map is the successor's interface contract)
+- `docs/BUILD_v6.md` — building/flashing v6
+- `docs/IBUS_PROTOCOL.md` — the I-Bus CDC protocol spec (canonical upstream source is dead; this is the capture)
+- `docs/SUCCESSOR_HARDWARE_OPTIONS.md` — successor design + decisions
+- `docs/SAAB_9-5_NOTES.md` — 9-5 research, model quirks
+- `docs/RELATED_PROJECTS.md` — lineage, competitors, 2006+ landscape
+- `HARDWARE/README.md` — board files
+- `TODO.md` — roadmap
+
 ## Project direction
 
 See `TODO.md`. Short version: keep v6 (STM32+RN52) alive as-is; a spiritual

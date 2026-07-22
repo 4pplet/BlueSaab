@@ -7,9 +7,10 @@ built-in CAN.
 ## Phase 0 — Repo hygiene (make it a real OSS project)
 
 - [ ] Commit the `HARDWARE/` directory (currently untracked)
-- [ ] Add a root `README.md` (what BlueSaab is, supported cars, photos, quick start)
-- [ ] Add a top-level `LICENSE` file (sources carry GPL-3.0 headers — add the full text)
-- [ ] Add `CLAUDE.md` / contributor docs (build instructions, architecture overview)
+- [x] Add a root `README.md` (photos still to add)
+- [x] Add a top-level `LICENSE` file (GPL-3.0 full text)
+- [x] Add `CLAUDE.md` / contributor docs; `docs/BUILD_v6.md` (build steps
+      unverified — see next item); `docs/IBUS_PROTOCOL.md` protocol capture
 - [ ] Verify the firmware still builds with a current `arm-none-eabi-gcc`; document
       the known-good toolchain version in the README
 - [ ] Add CI (GitHub Actions) that builds the firmware on every push
