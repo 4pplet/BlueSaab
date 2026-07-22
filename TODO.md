@@ -32,7 +32,8 @@ Tier 1 — restore what users miss (driver support already exists):
 - [ ] Volume up/down on presets 4/5 (`AV+`/`AV-` already in RN52 driver)
 - [ ] Extra-long middle SEEK → discoverable (wheel-only pairing, pre-v6 muscle memory)
 - [ ] Wire IHU pause events 0xB1/0xB0 → AVRCP pause/play (currently ignored)
-- [ ] Set RN52 gain to max at boot (`SS,0F`) — fixes common "too quiet" complaint
+- [x] ~~Set RN52 gain to max at boot~~ — audit found v6 already does this
+      (`RN52_SET_MAXVOL` in `RN52::initialize`)
 
 Tier 2 — polish:
 
@@ -49,8 +50,12 @@ Tier 3 — fixes:
       "IHU not in CDC mode" status variant (see docs/SAAB_9-5_NOTES.md #3)
 - [ ] Make the CDC-entry beep (0x430) compile-time optional (9-5 advice)
 
-Out of scope for v6.2: track metadata on SID, config system, shuffle,
-multi-device (RN52 can't).
+Out of scope for v6.2: config system, shuffle, multi-device (RN52 can't).
+(Track metadata on SID turned out to already exist — see docs/V6_CODE_AUDIT.md.)
+
+Bug-fix menu (if a release ever happens): see `docs/V6_CODE_AUDIT.md` —
+scroll-seam fix A2, Mail-alloc NULL checks A4, ISR-locking fix A1, dead-code
+removal A3.
 
 - [x] Document pairing properly — see `docs/USAGE_v6.md` (preset 1 = discoverable;
       long-press SEEK was v5 behavior and does nothing in 6.1.1)

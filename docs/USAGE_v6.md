@@ -53,9 +53,14 @@ notes mention any of these, they predate 6.1.1:
 | Preset 2 → max volume (`SS,0F`) | Not wired |
 | Long CD/RDM → volume gain step | Not wired |
 
-The RN52 volume commands (`AV+`, `AV-`, `SS,0F`) still exist in the driver but
+The RN52 volume-step commands (`AV+`, `AV-`) still exist in the driver but
 are not connected to any button — volume is controlled from the phone or the
-head unit's own volume knob.
+head unit's own volume knob. (Max gain `SS,0F` *is* applied automatically at
+boot, so no button for it is needed.)
+
+Note: with SID text enabled, the SID row 2 shows scrolling **artist – title**
+track metadata when the phone provides it (fetched on every track change);
+"BlueSaab v6" is only the fallback text.
 
 ## Debug serial console
 

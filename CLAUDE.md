@@ -42,6 +42,7 @@ RN52, `H` help.
 
 - `README.md` — project front door; `LICENSE` — GPL-3
 - `docs/USAGE_v6.md` — v6 user manual (button map is the successor's interface contract)
+- `docs/V6_CODE_AUDIT.md` — code audit: known bugs, don't-port-this list for the successor
 - `docs/BUILD_v6.md` — building/flashing v6 (verified toolchain: ARM GCC 8.5)
 - `docs/FLASHING_v6_HOWTO.md` — step-by-step flash guide (SWD + serial bootloader)
 - `docs/IBUS_PROTOCOL.md` — the I-Bus CDC protocol spec (canonical upstream source is dead; this is the capture)
