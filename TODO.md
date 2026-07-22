@@ -114,17 +114,13 @@ normally, ALWAYS act when needed — so observability gets built in):
       unlock + CD mode must just work; a week of driving with zero
       unexplained resets on the counter
 
-**Test rig — to be unambiguous: the v6 board (STM32+RN52, fw 6.1.6) is
-always the device under test; the ESP32 is bench INSTRUMENTATION playing
-the car's role, and never runs v6 firmware.** ESP32 devkit + SN65HVD230 on
-a bench CAN bus with the v6 unit, acting as (a) timestamping CAN logger —
-turns the ≥10 ms / 140 ms / 950 ms timing rules into measured pass/fail,
-and (b) IHU simulator replaying 0x6A1/0x3C0 — bench-validates the whole
-handshake without a car, including hostile poll bursts against the seam
-guards. The synergy is procurement + code reuse only: same parts and same
-TWAI driver code the v7 successor prototype needs, and later v7 firmware
-gets tested against v6 as the reference implementation using this same
-rig. For 6.1.6's flicker verdict: soak 30+ min with scrolling metadata.
+**Validation method (decided 2026-07-22): v6 firmware is validated in the
+car**, per the two-phase checklist above — bench serial checks first, then
+the in-car pass; the `E` command's error counters/ESR provide the
+quantified bus-health verdict. For the flicker verdict specifically: soak
+30+ min with scrolling metadata. (An ESP32-based CAN logger/IHU-simulator
+rig remains an idea for *successor development* — v7 firmware tested
+against the v6 board as reference — but is not part of v6 validation.)
 
 Tier 3 — fixes:
 
