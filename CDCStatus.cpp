@@ -15,10 +15,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
+#include <string.h>
 #include "CDCStatus.h"
 #include "SaabCan.h"
-#include "MessageSender.h"
 #include "Bluetooth.h"
 #include "SidResource.h"
 
@@ -104,9 +103,12 @@ void CDCStatus::onCDCControlFrame(CANMessage& frame) {
 			cdcActive = true;
 			#if SID_TEXT_CONTROL_ENABLED
 				{
-					// Show firmware + RN52 versions for a few seconds, e.g. "6.1.2 R1.16"
+					// Show firmware + RN52 versions for a few seconds, e.g.
+					// "6.1.4 R1.16". Built by hand - this runs in the CAN RX
+					// interrupt, where printf-family calls are not safe.
 					char verText[13];
-					snprintf(verText, sizeof(verText), FIRMWARE_VERSION " R%s", bluetooth.getRN52Version());
+					strcpy(verText, FIRMWARE_VERSION " R"); // 8 chars
+					strncat(verText, bluetooth.getRN52Version(), sizeof(verText) - 9);
 					sidResource.showTemporary(verText, 4);
 				}
 				sidResource.activate();

@@ -164,6 +164,7 @@ void RN52::processCommand(const char *cmd) {
 							version[i++] = *p++;
 						}
 						version[i] = 0;
+						getLog()->log("RN52 version: %s\r\n", (int) version);
 						break;
 					}
 				}
