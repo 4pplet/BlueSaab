@@ -1,14 +1,18 @@
 # Building & flashing v6 firmware
 
-Status: documented from the repo as-is; the "verify build with a current
-toolchain" TODO item is still open — expect to update this file the first
-time a fresh clone is built.
+Status: **build verified 2026-07-22** — clean build from this repo with ARM
+GCC 8.5.0 on macOS (Apple Silicon). Newer GCC major versions are untested;
+the code is `gnu++98`-flagged mbed OS 2, so prefer the known-good GCC 8.
 
 ## Toolchain
 
-- `arm-none-eabi-gcc` (GNU Arm Embedded). The code is C++03-era mbed OS 2 —
-  recent GCC versions should compile it but this is **unverified**; if a
-  modern toolchain fights you, GCC 6–9 era is the safest bet.
+- **Known good:** Homebrew `arm-none-eabi-gcc@8` (8.5.0) + `arm-none-eabi-binutils`.
+  Both are keg-only, so put them on PATH explicitly:
+
+  ```sh
+  export PATH="/opt/homebrew/opt/arm-none-eabi-gcc@8/bin:/opt/homebrew/opt/arm-none-eabi-binutils/bin:$PATH"
+  ```
+
 - `make` — the root [Makefile](../Makefile) is a self-contained mbed-exported
   GCC ARM makefile (builds into `BUILD/`, target NUCLEO_F103RB /
   STM32F103RB, Cortex-M3).
@@ -23,8 +27,9 @@ time a fresh clone is built.
 make
 ```
 
-Output: `BUILD/` (gitignored) — final artifact is a `.bin`/`.elf` for the
-STM32F103RB.
+Output: `BUILD/` (gitignored) — `BlueSaab.bin` / `.hex` / `.elf`. Verified
+footprint at v6.1.1: **103 KB flash** (of 128 KB), **~10 KB static RAM**
+(of 20 KB) — text 100524 + data 2720 + bss 7160.
 
 ## Flash
 

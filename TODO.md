@@ -11,8 +11,9 @@ built-in CAN.
 - [x] Add a top-level `LICENSE` file (GPL-3.0 full text)
 - [x] Add `CLAUDE.md` / contributor docs; `docs/BUILD_v6.md` (build steps
       unverified — see next item); `docs/IBUS_PROTOCOL.md` protocol capture
-- [ ] Verify the firmware still builds with a current `arm-none-eabi-gcc`; document
-      the known-good toolchain version in the README
+- [x] Verify the firmware builds — clean build 2026-07-22 with Homebrew
+      ARM GCC 8.5.0 (103 KB flash / 10 KB RAM); toolchain documented in
+      `docs/BUILD_v6.md`. GCC 12+ untested — stick with 8 for releases
 - [ ] Add CI (GitHub Actions) that builds the firmware on every push
 - [ ] Decide branch strategy (`master` = releases, `new` currently identical — rename or delete)
 
