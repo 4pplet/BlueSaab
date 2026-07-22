@@ -33,3 +33,22 @@ Intelligence worth noting from their compatibility claims:
 Differentiators the successor has that CDConnect lacks: SID text, multi-device
 pairing/swap, open source hardware+firmware, sub-100 µA parked draw (unknown
 for CDConnect, but worth beating).
+
+## How 2006+ cars are handled (out of our scope, for the record)
+
+The 2006 9-5 / 2007 9-3 facelift head units (black Fujitsu) **dropped the
+external CD-changer input** — that's why every CDC-based device stops at 2005.
+Aftermarket solutions for those cars impersonate a different factory
+accessory:
+
+- **BT Changer** (bt-changer.com, Hungary): plugs into the **XM satellite
+  tuner harness** behind the head unit and emulates the factory XM tuner — an
+  "XM" source appears next to AM/FM. Requires the black Fujitsu unit;
+  steering-wheel support is partial on 9-3; known Fujitsu firmware bug mutes
+  audio ~14 s occasionally.
+- **9-3 SS 2003–2006 (GMLAN)**: AUX-connector modules on the back of the
+  radio (e.g. SP-BT02), Dension Gateway 500, or retrofitting the factory OEM
+  Bluetooth module (2007–2008); ~2006+ cars have a factory 3.5 mm AUX.
+
+Supporting 2006+ would therefore be a separate product (XM emulation, other
+connector and protocol), not an extension of the CDC successor.
