@@ -52,7 +52,7 @@
  */
 
 #define MODULE_NAME					"BlueSaab v6"
-#define FIRMWARE_VERSION			"6.1.5"
+#define FIRMWARE_VERSION			"6.1.6"
 
 // Set to 0 to suppress the SID beep on entering CDC mode (recommended for
 // 9-5s if chasing warning-light issues - see docs/SAAB_9-5_NOTES.md)

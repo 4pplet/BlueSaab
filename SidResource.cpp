@@ -40,7 +40,7 @@ SidResource::SidResource():
 	writeTextOnDisplayUpdateNeeded = false;
 	tempText[0] = 0;
 	tempGrants = 0;
-	clearPending = false;
+	lastTextSend = 0;
 
 	// Fill in some default values
 	memcpy(sidMessageGroup[0],"\x42\x96\x02" "BlueS",sizeof(sidMessageGroup[0]));
@@ -84,9 +84,17 @@ void SidResource::run() {
 				handleSignals(result.value.signals);
 		}
 
-		sendDisplayRequest();
-		lastRequest = us_ticker_read();
+		// Capture-and-clear the breakthrough flag atomically: the CAN ISR
+		// can set it between a plain read and a later clear, which would
+		// silently downgrade a driver-action request to static.
+		bool breakthrough;
+		__disable_irq();
+		breakthrough = sidDriverBreakthroughNeeded;
 		sidDriverBreakthroughNeeded = false;
+		__enable_irq();
+
+		sendDisplayRequest(breakthrough);
+		lastRequest = us_ticker_read();
 
 		int32_t remaining = NODE_UPDATE_BASETIME;
 		while (remaining > 0) {
@@ -102,15 +110,21 @@ void SidResource::run() {
 }
 
 void SidResource::handleSignals(int32_t signals) {
-	if (signals & 0x40) {
-		clearPending = false;
+	if (signals & 0x40)
 		scroller.clear();
-	}
 	if (signals & 0x20)
 		writeGrantedText();
 }
 
 void SidResource::writeGrantedText() {
+	// Pace consecutive text groups: the previous 3-frame 0x337 group takes
+	// ~20 ms to transmit (10 ms spacing); writing sidMessageGroup or
+	// triggering the sender before it finishes would tear the group or
+	// violate the >=10 ms same-ID rule at the group seam.
+	uint32_t since_ms = (us_ticker_read() - lastTextSend) / 1000;
+	if (since_ms < 35)
+		Thread::wait(35 - since_ms);
+
 	// Snapshot the temporary-text state under a critical section: the CAN
 	// ISR (showTemporary) can otherwise interleave with the decrement or
 	// rewrite tempText mid-copy.
@@ -130,14 +144,20 @@ void SidResource::writeGrantedText() {
 		const char *buffer = scroller.get();
 		formatTextMessage(buffer[0] ? buffer : MODULE_NAME, writeTextOnDisplayUpdateNeeded);
 	}
+	// One-shot: only the first write after activation is an "event" write
+	// (0x82); subsequent scroll updates are static (0x02). This flag was
+	// never cleared before - every write since activation carried the event
+	// mark, a candidate cause of SID flicker.
+	writeTextOnDisplayUpdateNeeded = false;
 	textSender.send();
+	lastTextSend = us_ticker_read();
 }
 
 /**
  * Sends a request for using the SID, row 2. We may NOT start writing until we've received a grant frame with the correct function ID!
  */
 
-void SidResource::sendDisplayRequest() {
+void SidResource::sendDisplayRequest(bool driverBreakthrough) {
 
 	/* Format of NODE_DISPLAY_RESOURCE_REQ frame:
 	 ID: Node ID requesting to write on SID
@@ -151,7 +171,7 @@ void SidResource::sendDisplayRequest() {
 	unsigned char displayRequestCmd[8];
 	displayRequestCmd[0] = NODE_APL_ADR;
 	displayRequestCmd[1] = 0x02;
-	displayRequestCmd[2] = (sidWriteAccessWanted ? (sidDriverBreakthroughNeeded ? 0x01 : 0x05) : 0xFF);
+	displayRequestCmd[2] = (sidWriteAccessWanted ? (driverBreakthrough ? 0x01 : 0x05) : 0xFF);
 	displayRequestCmd[3] = NODE_SID_FUNCTION_ID;
 	displayRequestCmd[4] = 0x00;
 	displayRequestCmd[5] = 0x00;

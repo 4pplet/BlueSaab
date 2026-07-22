@@ -35,7 +35,7 @@
 
 DigitalOut aliveLed(PA_1);
 
-Thread logThread(osPriorityLow, 1024);
+Thread logThread(osPriorityLow, 1536); // full-newlib vfprintf needs headroom
 
 int main() {
 	logThread.start(callback(getLog(), &SerialLog::run));
@@ -49,14 +49,20 @@ int main() {
 
 	aliveLed = 1;
 
+	// CAN handlers first: bluetooth.initialize() blocks ~5 s waiting for the
+	// RN52 to reboot, and with the old order the node sat on a live bus with
+	// the RX IRQ running but nobody answering 0x6A1 polls or 0x3C0 commands
+	// for that whole window. Bluetooth commands queued meanwhile are held in
+	// the RN52 command queue and sent once its thread starts.
 	saabCan.initialize(47619);
-	bluetooth.initialize();
 	buttons.initialize();
 	cdcStatus.initialize();
 
 	#if SID_TEXT_CONTROL_ENABLED
 		sidResource.initialize();
 	#endif
+
+	bluetooth.initialize();
 
 	while (1) {
 		Thread::wait(1000);

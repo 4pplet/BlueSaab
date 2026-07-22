@@ -28,12 +28,12 @@ class SidResource {
 	unsigned char sidMessageGroup[3][8];
 	MessageSender textSender;
 
-	bool sidDriverBreakthroughNeeded;
-	bool sidWriteAccessWanted;
+	volatile bool sidDriverBreakthroughNeeded;
+	volatile bool sidWriteAccessWanted;
 
 	char tempText[13];
 	volatile int tempGrants;
-	volatile bool clearPending;
+	uint32_t lastTextSend;
 
 	bool writeTextOnDisplayUpdateNeeded;
 
@@ -41,7 +41,7 @@ class SidResource {
 
 	void run();
 
-	void sendDisplayRequest();
+	void sendDisplayRequest(bool driverBreakthrough);
 	void handleSignals(int32_t signals);
 	void writeGrantedText();
 	void formatTextMessage(const char textIn[], bool event);
@@ -65,13 +65,11 @@ public:
 	// permanently breaking the lock. The thread does the clear instead
 	// (signal 0x40).
 	void activate() {
-		clearPending = true;
 		sidWriteAccessWanted = true;
 		writeTextOnDisplayUpdateNeeded = true;
 		thread.signal_set(0x40);
 	}
 	void deactivate() {
-		clearPending = true;
 		sidWriteAccessWanted = false;
 		thread.signal_set(0x40);
 	}

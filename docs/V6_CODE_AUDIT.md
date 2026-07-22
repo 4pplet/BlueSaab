@@ -119,6 +119,58 @@ unused; ~25 mA constant draw is inherent to this firmware.
 - [ ] RN52 module firmware version (`d`): ___
 - [ ] Metadata behavior on track change: ___
 
+## Bug hunt (2026-07-22, three adversarial reviewers → v6.1.6)
+
+Full-codebase hunt by three independent reviewers (RN52/serial stack,
+display/text stack, CAN layer). All fixes in v6.1.6; all bugs below were
+**pre-existing since ≤v6.1.1** unless noted.
+
+RN52/serial stack:
+
+- MAJOR: `queueCommand` silently dropped commands on a full queue → now
+  logged. MAJOR: details handler passed a mutable global as a *deferred
+  printf format string* (`%` in a track title → garbled log or hardfault) →
+  own buffer via `%s`. MAJOR: a phone connecting during the 5 s boot wait
+  was never detected (GPIO2 is a pulse; no initial state query) leaving all
+  AVRCP buttons dead → initial `Q` query added.
+- MINOR: `logFrame` heap leak on full mailbox; unbounded response-drain
+  loops (now capped at 40 lines); stale `a2dpConnected` after debug reboot.
+
+Display/text stack (this reviewer host-compiled and ran the dormant unit
+tests — all 60 Scroller asserts pass; core scroll math is clean):
+
+- MAJOR: `utf_convert` passed 3/4-byte UTF-8 (curly quotes, dashes, emoji)
+  through as raw bytes → garbage glyphs on the SID; now consumed+dropped
+  like unknown 2-byte sequences. MAJOR: `writeTextOnDisplayUpdateNeeded`
+  was never cleared — every SID write since first activation carried the
+  "event" mark (0x82) instead of static (0x02); now one-shot. Another
+  strong flicker candidate.
+- MINOR: `sendCdcStatus` byte-0 expression was wrong for 2 of 4
+  event/remote combinations (latent — callers pass them in lockstep);
+  corrected to match the documented bit layout with no on-bus change for
+  existing call patterns. ~5 s boot window with CAN IRQ live but no
+  handlers/no 0x3C8 (bluetooth init blocked first) → init reordered,
+  CAN handlers now attach in ms. 0x337 text groups lacked the seam/tear
+  guard 0x6A2 got in v6.1.5 → 35 ms pacing in writeGrantedText.
+  Breakthrough flag capture-and-clear made atomic; breakthrough now only
+  requested for recognized buttons, not every 0x80 frame. logThread stack
+  1024→1536 (full-newlib vfprintf).
+
+CAN layer (bit timing verified EXACT: PCLK1 36 MHz, prescaler 36, 21 tq,
+TSEG1 15/TSEG2 5, sample point 76.19 %, SJW 2, BTR 0x014E0023 →
+47 619.048 bit/s = 0 ppm vs the true 10⁶/21 I-Bus rate):
+
+- MEDIUM: the global CAN object joined the live I-Bus at **100 kbit/s
+  error-active during static init**, corrupting car-bus frames at every
+  ignition-on until `initialize()` set the real rate → constructed at
+  47619 directly. MEDIUM: `TXFP=0` let same-ID frame groups reorder by
+  mailbox index under bus load → FIFO order enabled. MEDIUM: RX FIFO
+  overruns were silent → counted, cleared, shown in debug `E`.
+- LOW: INAK waits bounded (stuck-dominant bus degrades instead of hanging
+  boot). Latent/noted: FIFO1 gating mismatch (unused), no bus-off
+  telemetry (ABOM recovers silently), crystal-fail silent hang in vendored
+  clock code (not touched).
+
 ## Fix status
 
 - **Fixed in v6.1.3:** A2 (scroll seam), A3 (dead overloads deleted),

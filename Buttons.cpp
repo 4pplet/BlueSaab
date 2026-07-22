@@ -73,12 +73,14 @@ void Buttons::onFrame(CANMessage& frame) {
 	if (frame.data[0] != 0x80)
 		return;
 
-#if SID_TEXT_CONTROL_ENABLED
-	sidResource.requestDriverBreakthrough();
-#endif
-
 	Buttons::Button button = decode(frame.data[1], frame.data[2]);
 	if (button != Buttons::NONE) {
+#if SID_TEXT_CONTROL_ENABLED
+		// Driver breakthrough only for actual (recognized) button presses -
+		// not for every 0x80-flagged frame (mode changes, pause, unmapped
+		// codes), which needlessly escalated our display requests.
+		sidResource.requestDriverBreakthrough();
+#endif
 //		getLog()->log("Buttons::onFrame button %d", button);
 		switch (button) {
 		case Buttons::NXT:

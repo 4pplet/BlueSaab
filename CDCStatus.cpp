@@ -127,8 +127,9 @@ void CDCStatus::onCDCControlFrame(CANMessage& frame) {
 					// "6.1.4 R1.16". Built by hand - this runs in the CAN RX
 					// interrupt, where printf-family calls are not safe.
 					char verText[13];
-					strcpy(verText, FIRMWARE_VERSION " R"); // 8 chars
-					strncat(verText, bluetooth.getRN52Version(), sizeof(verText) - 9);
+					strcpy(verText, FIRMWARE_VERSION " R"); // 7 chars + NUL
+					strncat(verText, bluetooth.getRN52Version(),
+							sizeof(verText) - sizeof(FIRMWARE_VERSION " R"));
 					sidResource.showTemporary(verText, 4);
 				}
 				sidResource.activate();
@@ -213,7 +214,11 @@ void CDCStatus::sendCdcStatus(bool event, bool remote, bool cdcActive) {
 	 */
 
 	unsigned char cdcGeneralStatusCmd[8] = { 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xD0 };
-	cdcGeneralStatusCmd[0] = ((event ? 0x07 : 0x00) | (remote ? 0x00 : 0x01)) << 5;
+	// bit7 = event (vs base time), bit6 = due to remote CDC_COMMAND,
+	// bit5 = disc-presence valid (always). The previous expression got two
+	// of the four event/remote combinations wrong; it never misfired only
+	// because run() always passes event==remote.
+	cdcGeneralStatusCmd[0] = ((event ? 0x4 : 0x0) | (remote ? 0x2 : 0x0) | 0x1) << 5;
 	cdcGeneralStatusCmd[1] = (cdcActive ? 0xFF : 0x00); // Validation for presence of six discs in the magazine
 	cdcGeneralStatusCmd[2] = (cdcActive ? 0x3F : 0x01); // There are six discs in the magazine
 	cdcGeneralStatusCmd[3] = (cdcActive ? 0x41 : 0x01); // ToDo: check 0x01 | (discMode << 4) | 0x01

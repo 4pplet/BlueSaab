@@ -106,6 +106,21 @@ void utf_convert(const char *from, char *to, int size) {
 				*to++ = c;
 			}
 			from+=2;
+		} else if ((*from & 0b11110000) == 0b11100000) {
+			// 3-byte UTF8 sequence (e.g. curly quotes, dashes) - not in the
+			// tables; consume and drop it like unknown 2-byte sequences,
+			// instead of leaking raw bytes to the SID
+			if (from[1] == 0 || from[2] == 0)
+				break;
+			from += 3;
+		} else if ((*from & 0b11111000) == 0b11110000) {
+			// 4-byte UTF8 sequence (emoji etc.) - consume and drop
+			if (from[1] == 0 || from[2] == 0 || from[3] == 0)
+				break;
+			from += 4;
+		} else if ((*from & 0b11000000) == 0b10000000) {
+			// stray continuation byte - drop
+			from++;
 		} else {
 			*to++ = *from++;
 		}
