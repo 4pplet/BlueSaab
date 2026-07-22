@@ -41,6 +41,7 @@ RN52, `H` help.
 ## Documentation map
 
 - `README.md` — project front door; `LICENSE` — GPL-3
+- `CHANGELOG.md` — firmware version history (6.1.2+ unreleased pending bench)
 - `docs/USAGE_v6.md` — v6 user manual (button map is the successor's interface contract)
 - `docs/V6_CODE_AUDIT.md` — code audit: known bugs, don't-port-this list for the successor
 - `docs/BUILD_v6.md` — building/flashing v6 (verified toolchain: ARM GCC 8.5)
