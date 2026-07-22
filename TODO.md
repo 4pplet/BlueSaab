@@ -35,7 +35,8 @@ unchanged; improvements only on currently-unused buttons. Hardware analysis:
 `docs/SUCCESSOR_HARDWARE_OPTIONS.md`.
 
 **Decided 2026-07-22: single ESP32** (Option A) — one chip for BT audio, CAN,
-and app logic.
+and app logic. **Target cars: pre-2006** (9-3 gen1 1998–2002/03, 9-5 gen1
+1998–2005); 2006+ facelift and nav-equipped cars out of scope for now.
 
 - [ ] Pick a project name
 - [ ] Design multi-device swap UX (several paired phones, switch from the

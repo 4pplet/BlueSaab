@@ -6,6 +6,11 @@ the STM32+RN52 board. Working name TBD.
 
 > **DECISION (2026-07-22): Option A — single ESP32.** One chip for Bluetooth
 > audio, CAN, and application logic. Options B/C kept below for the record.
+>
+> **Target cars (2026-07-22): pre-2006 SAABs** — 9-3 gen1 (1998–2002, Cab
+> –2003) and 9-5 gen1 (1998–2005), same proven range as v6 and CDConnect.
+> 2006+ 9-5 facelift and navigation-equipped cars are out of scope until the
+> bus/display differences are understood (see RELATED_PROJECTS.md).
 
 What the successor must do (same job as v6, minus the dead parts):
 
