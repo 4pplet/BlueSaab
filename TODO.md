@@ -84,6 +84,45 @@ with a current meter attached.
 - [ ] 9-5 dead-buttons fix — joins this release if a 9-5 is available for
       testing after the 6.1.6 validation session.
 
+**Sleep/wake design sketch:** sleep = STM32 stop mode + RN52 PWREN off +
+transceiver in RS-standby (NOT EN-sleep: standby keeps the receiver
+mirroring the bus onto RXD; EN-sleep forces RXD recessive = unwakeable).
+Wake = bus goes dominant → RXD (idles high) falls → EXTI on PB8 wakes the
+core (the CAN peripheral is unclocked in stop; its AWUM can't help).
+Resume: restore PLL/72 MHz → RTOS tick → RS low → CAN reinit 47619 →
+PWREN on (BT functional ~2 s — fine, driver hasn't reached the CD button).
+First wake frame is lost by design; the IHU re-polls. Watchdog cadence:
+RTC alarm (LSI) wakes every ~20 s for a ~ms IWDG kick, ~0.02 % duty.
+Bench-verify: HVD234 standby RXD wake behavior per datasheet; stop-exit
+clock + mbed RTX tick restore.
+
+6.1.7 validation plan (watchdog/sleep are "anti-features" — must NEVER act
+normally, ALWAYS act when needed — so observability gets built in):
+
+- [ ] Reset-cause telemetry in 6.1.7 itself: boot banner prints the reset
+      reason (RCC_CSR flags: IWDG vs POR vs pin) + a reset counter kept in
+      RTC backup registers (survive resets) — makes spurious watchdog
+      resets visible evidence instead of invisible blips
+- [ ] Hang-injection debug command (debug builds only): wedge a thread on
+      purpose → verify reset within timeout → verify full recovery
+      (BT reconnect + IHU handshake)
+- [ ] Sleep: bench PSU with current readout; scripted silence→sleep→
+      frame→wake cycles (50×) via the CAN test rig; false-sleep check
+      (active bus must always hold it awake); measure IWDG-kick wake
+      bursts on the meter
+- [ ] In-car soak: multi-day parked test — battery voltage before/after,
+      unlock + CD mode must just work; a week of driving with zero
+      unexplained resets on the counter
+
+**Test rig (build from successor prototype parts — dual-purpose):** ESP32
+devkit + SN65HVD230 as (a) timestamping CAN logger — turns the ≥10 ms /
+140 ms / 950 ms timing rules into measured pass/fail for 6.1.6, and (b)
+IHU simulator replaying 0x6A1/0x3C0 — bench-validates the whole handshake
+without a car, including hostile poll bursts against the seam guards. Same
+hardware + TWAI code the successor needs anyway; the rig IS successor
+progress. For 6.1.6's flicker verdict: soak 30+ min with scrolling
+metadata.
+
 Tier 3 — fixes:
 
 - [ ] 9-5 "buttons dead until source switch" bug — implement the missing
