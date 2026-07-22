@@ -18,6 +18,33 @@ built-in CAN.
 
 ## Phase 1 — Keep v6 alive
 
+### v6.2 firmware — QOL release (all additive; gated on build verification)
+
+Tier 1 — restore what users miss (driver support already exists):
+
+- [ ] Volume up/down on presets 4/5 (`AV+`/`AV-` already in RN52 driver)
+- [ ] Extra-long middle SEEK → discoverable (wheel-only pairing, pre-v6 muscle memory)
+- [ ] Wire IHU pause events 0xB1/0xB0 → AVRCP pause/play (currently ignored)
+- [ ] Set RN52 gain to max at boot (`SS,0F`) — fixes common "too quiet" complaint
+
+Tier 2 — polish:
+
+- [ ] Auto-discoverable when paired-device list is empty (first-install UX)
+- [ ] SID state feedback: "PAIRING" / "CONNECTED" / "NO PHONE" (SID builds only)
+- [ ] Sleep on bus silence: STM32 stop + RN52_PWREN off + CAN transceiver
+      sleep, wake on CAN RX edge (~25 mA → ~6 mA; LM1117 Iq is the floor).
+      Doubles as the successor's sleep-state-machine prototype
+- [ ] Voice assistant (Siri etc.) on long middle SEEK (`vassistant()` exists)
+
+Tier 3 — fixes:
+
+- [ ] 9-5 "buttons dead until source switch" bug — implement the missing
+      "IHU not in CDC mode" status variant (see docs/SAAB_9-5_NOTES.md #3)
+- [ ] Make the CDC-entry beep (0x430) compile-time optional (9-5 advice)
+
+Out of scope for v6.2: track metadata on SID, config system, shuffle,
+multi-device (RN52 can't).
+
 - [x] Document pairing properly — see `docs/USAGE_v6.md` (preset 1 = discoverable;
       long-press SEEK was v5 behavior and does nothing in 6.1.1)
 - [x] iPhone pairing issue resolved: preset 1 confirmed working in-car (2026-07-22);
