@@ -180,6 +180,19 @@ Sleep-state target: **< 100 µA total** from 12 V — years of parking, ~500×
 better than v6. Firmware obligation: the main loop must track bus silence and
 enter deep sleep; there is no ignition signal to lean on.
 
+**Chip choice reconsidered for power (2026-07-22) — ESP32 confirmed.** Drain
+only matters when parked; parked == bus silent == deep sleep (~10 µA), where
+the ESP32 is excellent. Its unflattering 40–80 mA idle figure applies only
+while the bus is awake, i.e. while the car's charging system is available.
+BM83 idles in the same class and needs the identical sleep design; QCC is
+NDA-bound. No alternative improves the parked number, which is set by our
+sleep architecture, not the SoC.
+
+Hardware refinement instead: gate the DAC, line driver, and LEDs behind a
+high-side load switch (or the buck's EN) so sleep-state draw is fixed **by
+construction** at ESP32-deep-sleep + transceiver-sleep + buck Iq (~30–50 µA),
+immune to firmware bugs leaving a peripheral powered.
+
 Open decisions:
 
 - [ ] Project name (it's a spiritual successor, not "BlueSaab v7" — or is it?)
