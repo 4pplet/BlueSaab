@@ -87,9 +87,10 @@ Byte 0 = `0x80` marks a command/button event. Byte 1 (+byte 2 for presets)
 | 0x14 | CDC mode deselected | deactivate, disconnect BT |
 | 0x59 | NXT (wheel) | play/pause |
 | 0x35 / 0x36 | Track + / − | next / previous |
-| 0x68 + byte2 0x01–0x06 | IHU presets 1–6 | 1 = discoverable, 3 = reconnect, 6 = disconnect |
+| 0x68 + byte2 0x01–0x06 | IHU presets 1–6 | 1 = discoverable, 3 = reconnect, 4/5 = gain down/up (6.1.3+), 6 = disconnect |
 | 0x45 / 0x46 | SEEK+/− long press | unassigned |
-| 0x84 / 0x88 | middle SEEK long / >2 s | unassigned |
+| 0x84 | middle SEEK long press | unassigned |
+| 0x88 | middle SEEK >2 s | discoverable (6.1.3+) |
 | 0x76 | CD/RDM long press (random) | unassigned |
 | 0xB1 / 0xB0 | pause on / off | unassigned |
 
@@ -119,9 +120,10 @@ the SID at all; feature silently does nothing there.
 
 ## Sound request 0x430
 
-`80 04 00 00 00 00 00 00` = one beep, sent by v6 when entering CDC mode.
-Field advice on the 9-5: beeps aggravated debugging of warning-light issues —
-the successor should make beeps optional or drop them.
+`80 04 00 00 00 00 00 00` = one beep, sent when entering CDC mode
+(compile-time optional since 6.1.3: `CDC_ENTRY_BEEP_ENABLED`). Field advice
+on the 9-5: beeps aggravated debugging of warning-light issues — the
+successor should make beeps optional or drop them.
 
 ## Sources
 

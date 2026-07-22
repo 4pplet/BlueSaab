@@ -132,5 +132,33 @@ unused; ~25 mA constant draw is inherent to this firmware.
   callbacks — Buttons/CDCStatus handlers still run in the RX interrupt;
   they only queue/signal, which is ISR-safe, but the successor should
   dispatch to a task regardless).
-- Bench validation of all of the above: pending (v6.1.2–6.1.4 have not yet
+- Bench validation of all of the above: pending (v6.1.2+ has not yet
   touched hardware).
+
+## Independent adversarial review (2026-07-22, → v6.1.5)
+
+A fresh-eyes adversarial review of the full v6.1.1→v6.1.4 diff (verifying
+RTX semantics against the vendored sources) found and v6.1.5 fixed:
+
+- **MAJOR: `scroller.clear()` still ran in the CAN ISR** via
+  `activate()/deactivate()`. Worse than a skipped lock: RTX semaphore *wait*
+  fails in ISR (unchecked) but *release* succeeds, so each CDC mode change
+  inflated the semaphore by one token — permanently making it a two-owner
+  lock and re-enabling the very corruption v6.1.4 claimed to fix. Now: ISR
+  sets `clearPending` + signal 0x40; the SidResource thread clears.
+- **MAJOR: 0x6A2 seam violation + dropped polls** in NodeStatusSender: a
+  poll arriving mid-sequence started the next sequence with zero gap after
+  the previous one's last frame (violating the ≥10 ms same-ID rule), and
+  coalesced signals answered only the highest-priority poll. Now: ≥10 ms
+  seam guard + every requested sequence is sent.
+- MINOR: grants arriving during the 100 ms request-spacing sleep were
+  delayed; the spacing wait now services grant/clear signals.
+- MINOR: `tempGrants`/`tempText` ISR-vs-thread races; snapshot now taken
+  under a brief critical section.
+- NITs: protocol doc button table updated, PAIRING display now 10 s to
+  match the RN52 pairing window.
+
+The review also positively verified (against vendored RTX sources): the
+signal_wait(0) usage, ISR-safety of signal_set/Mail/Queue calls, ticker
+wraparound handling, all new buffer bounds, V-command retry behavior, and
+preservation of the 0x357/0x3C8/140 ms/10 ms protocol cadences.

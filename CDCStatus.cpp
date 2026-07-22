@@ -53,6 +53,26 @@ unsigned char soundCmd[] = {0x80,0x04,0x00,0x00,0x00,0x00,0x00,0x00};
  */
 class NodeStatusSender {
 	Thread thread;
+	uint32_t lastFrameSent;
+	bool sentAnything;
+
+	void sendSequence(const unsigned char frames[][8]) {
+		// Seam guard: >=10 ms between same-ID frames also across sequence
+		// boundaries (a poll arriving mid-sequence would otherwise start
+		// the next sequence back-to-back with the previous one's last frame).
+		if (sentAnything) {
+			uint32_t since_ms = (us_ticker_read() - lastFrameSent) / 1000;
+			if (since_ms < 10)
+				Thread::wait(10 - since_ms);
+		}
+		for (int i = 0; i < NODE_STATUS_TX_MSG_SIZE; i++) {
+			if (i > 0)
+				Thread::wait(NODE_STATUS_TX_INTERVAL);
+			saabCan.sendCanFrame(NODE_STATUS_TX_CDC, frames[i]);
+		}
+		lastFrameSent = us_ticker_read();
+		sentAnything = true;
+	}
 
 	void run() {
 		while (1) {
@@ -60,25 +80,20 @@ class NodeStatusSender {
 			if (evt.status != osEventSignal)
 				continue;
 			int32_t sig = evt.value.signals;
-			const unsigned char (*frames)[8];
+			// signal_wait returns and clears ALL pending flags - answer every
+			// requested sequence rather than dropping the lower-priority ones
+			// (the 9-5 IHU requires each poll to be answered).
 			if (sig & 0x8)
-				frames = cdcPowerdownCmd;
-			else if (sig & 0x1)
-				frames = cdcActiveCmd;
-			else if (sig & 0x4)
-				frames = cdcPoweronCmd;
-			else
-				continue;
-			for (int i = 0; i < NODE_STATUS_TX_MSG_SIZE; i++) {
-				if (i > 0)
-					Thread::wait(NODE_STATUS_TX_INTERVAL);
-				saabCan.sendCanFrame(NODE_STATUS_TX_CDC, frames[i]);
-			}
+				sendSequence(cdcPowerdownCmd);
+			if (sig & 0x1)
+				sendSequence(cdcActiveCmd);
+			if (sig & 0x4)
+				sendSequence(cdcPoweronCmd);
 		}
 	}
 
 public:
-	NodeStatusSender(): thread(osPriorityNormal, 256) {
+	NodeStatusSender(): thread(osPriorityNormal, 256), lastFrameSent(0), sentAnything(false) {
 		thread.start(callback(this, &NodeStatusSender::run));
 		#if STACK_MONITOR_ENABLED
 			getLog()->registerThread("NodeStatusSender::run", &thread);

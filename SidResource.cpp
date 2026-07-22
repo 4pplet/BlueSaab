@@ -40,6 +40,7 @@ SidResource::SidResource():
 	writeTextOnDisplayUpdateNeeded = false;
 	tempText[0] = 0;
 	tempGrants = 0;
+	clearPending = false;
 
 	// Fill in some default values
 	memcpy(sidMessageGroup[0],"\x42\x96\x02" "BlueS",sizeof(sidMessageGroup[0]));
@@ -63,41 +64,68 @@ void SidResource::initialize() {
 
 /*
  * Signals: 0x10 = driver breakthrough requested, 0x20 = SID granted us the
- * display. All text assembly and sending happens on this thread - the CAN
+ * display, 0x40 = scroller clear requested (CDC mode change). All text
+ * assembly, scroller access and sending happens on this thread - the CAN
  * RX interrupt only sets signals. (Before v6.1.4 the text was formatted in
  * the ISR, where the scroller's semaphore silently cannot be taken - a
  * likely cause of the long-reported SID text corruption/flicker.)
  */
 void SidResource::run() {
+	uint32_t lastRequest = us_ticker_read() - 100 * 1000;
 	while(1) {
+		// Keep >=100 ms between our 0x357 requests, but keep servicing
+		// grant/clear signals while we wait out the spacing.
+		while (true) {
+			uint32_t since_ms = (us_ticker_read() - lastRequest) / 1000;
+			if (since_ms >= 100)
+				break;
+			osEvent result = Thread::signal_wait(0, 100 - since_ms);
+			if (result.status == osEventSignal)
+				handleSignals(result.value.signals);
+		}
+
 		sendDisplayRequest();
+		lastRequest = us_ticker_read();
 		sidDriverBreakthroughNeeded = false;
 
-		uint32_t start = us_ticker_read();
 		int32_t remaining = NODE_UPDATE_BASETIME;
 		while (remaining > 0) {
 			osEvent result = Thread::signal_wait(0, remaining);
 			if (result.status != osEventSignal)
 				break; // timeout: re-request on the 1 s schedule
-			if (result.value.signals & 0x20)
-				writeGrantedText();
-			if (result.value.signals & 0x10) {
-				// Driver breakthrough: re-request promptly, but keep the
-				// original >=100 ms spacing between our 0x357 requests.
-				uint32_t elapsed_ms = (us_ticker_read() - start) / 1000;
-				if (elapsed_ms < 100)
-					Thread::wait(100 - elapsed_ms);
-				break;
-			}
-			remaining = NODE_UPDATE_BASETIME - (int32_t)((us_ticker_read() - start) / 1000);
+			handleSignals(result.value.signals);
+			if (result.value.signals & 0x10)
+				break; // driver breakthrough: re-request (outer loop paces it)
+			remaining = NODE_UPDATE_BASETIME - (int32_t)((us_ticker_read() - lastRequest) / 1000);
 		}
 	}
 }
 
+void SidResource::handleSignals(int32_t signals) {
+	if (signals & 0x40) {
+		clearPending = false;
+		scroller.clear();
+	}
+	if (signals & 0x20)
+		writeGrantedText();
+}
+
 void SidResource::writeGrantedText() {
+	// Snapshot the temporary-text state under a critical section: the CAN
+	// ISR (showTemporary) can otherwise interleave with the decrement or
+	// rewrite tempText mid-copy.
+	char localTemp[sizeof(tempText)];
+	bool useTemp = false;
+	__disable_irq();
 	if (tempGrants > 0) {
 		tempGrants--;
-		formatTextMessage(tempText, writeTextOnDisplayUpdateNeeded);
+		memcpy(localTemp, tempText, sizeof(localTemp));
+		useTemp = true;
+	}
+	__enable_irq();
+
+	if (useTemp) {
+		formatTextMessage(localTemp, writeTextOnDisplayUpdateNeeded);
 	} else {
 		const char *buffer = scroller.get();
 		formatTextMessage(buffer[0] ? buffer : MODULE_NAME, writeTextOnDisplayUpdateNeeded);

@@ -94,7 +94,7 @@ void Buttons::onFrame(CANMessage& frame) {
 		case Buttons::SEEK_MIDDLE_EXTRA_LONG: // wheel-only pairing, pre-v6 muscle memory
 			bluetooth.discoverable();
 			#if SID_TEXT_CONTROL_ENABLED
-				sidResource.showTemporary("PAIRING", 8);
+				sidResource.showTemporary("PAIRING", 10); // matches RN52 10 s pairing window
 			#endif
 			break;
 		case Buttons::IHU3:

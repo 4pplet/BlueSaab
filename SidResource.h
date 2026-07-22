@@ -33,6 +33,7 @@ class SidResource {
 
 	char tempText[13];
 	volatile int tempGrants;
+	volatile bool clearPending;
 
 	bool writeTextOnDisplayUpdateNeeded;
 
@@ -41,6 +42,7 @@ class SidResource {
 	void run();
 
 	void sendDisplayRequest();
+	void handleSignals(int32_t signals);
 	void writeGrantedText();
 	void formatTextMessage(const char textIn[], bool event);
 public:
@@ -55,14 +57,23 @@ public:
 		sidDriverBreakthroughNeeded = true;
 		thread.signal_set(0x10);
 	}
+	// activate()/deactivate() are called from the CAN RX ISR. The scroller
+	// clear must NOT happen here: the scroller's semaphore cannot be taken
+	// in an ISR (RTX refuses and returns an error - unchecked, it silently
+	// skips locking) but release DOES work in an ISR, so an ISR-side
+	// wait/release pair inflates the semaphore by one token each time,
+	// permanently breaking the lock. The thread does the clear instead
+	// (signal 0x40).
 	void activate() {
-		scroller.clear();
+		clearPending = true;
 		sidWriteAccessWanted = true;
 		writeTextOnDisplayUpdateNeeded = true;
+		thread.signal_set(0x40);
 	}
 	void deactivate() {
-		scroller.clear();
+		clearPending = true;
 		sidWriteAccessWanted = false;
+		thread.signal_set(0x40);
 	}
 
 	void grantReceived(CANMessage& frame);

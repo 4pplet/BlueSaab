@@ -14,7 +14,7 @@ built-in CAN.
 - [x] Verify the firmware builds — clean build 2026-07-22 with Homebrew
       ARM GCC 8.5.0 (103 KB flash / 10 KB RAM); toolchain documented in
       `docs/BUILD_v6.md`. GCC 12+ untested — stick with 8 for releases
-- [ ] Add CI (GitHub Actions) that builds the firmware on every push
+- [x] Add CI (GitHub Actions) builds every push (.github/workflows/build.yml, pinned GCC 8)
 - [ ] Decide branch strategy (`master` = releases, `new` currently identical — rename or delete)
 
 ## Phase 1 — Keep v6 alive
@@ -76,7 +76,7 @@ long-reported flicker); all 0x6A2 node-status replies consolidated into one
 sender thread so sequences can't interleave (B1, 9-5 handshake hardening);
 CAN TX error/drop counters on debug `E` (A5); truthful RN52 init log (B3).
 
-### Validation checklist — v6.1.2→6.1.4 (nothing has touched hardware yet)
+### Validation checklist — v6.1.2→6.1.5 (nothing has touched hardware yet)
 
 Bench phase (USB-serial on UART2 @115200 for console; FTDI header powers
 the board for flashing — see docs/FLASHING_v6_HOWTO.md):
@@ -85,7 +85,7 @@ the board for flashing — see docs/FLASHING_v6_HOWTO.md):
       (firmware version) and `d` output → fill in docs/V6_CODE_AUDIT.md
       "deployed unit findings" (answers the static-SID-text question)
 - [ ] Back up current flash: `stm32flash -r backup_v6_unit.bin <port>`
-- [ ] Flash the CI-built v6.1.4 artifact; boot banner shows 6.1.4
+- [ ] Flash the CI-built v6.1.5 artifact; boot banner shows 6.1.5
 - [ ] Console shows "RN52 version: X.XX" after ~6 s (validates the V-command
       parse — new in 6.1.2; `R?` on SID would mean parse failed)
 - [ ] Debug commands still work: `V` (phone sees "BlueSaab"), pair, stream
@@ -104,7 +104,7 @@ In-car phase (any 9-3/9-5; extra valuable on a 9-5 — the 0x6A2 path is new):
       few times — critical check, the 0x6A2 sender was restructured and a
       malformed sequence lit warnings on a 2004 9-5 historically
 - [ ] CD mode activates normally, audio plays (CDC handshake via new sender)
-- [ ] Version banner "6.1.4 R1.16" shows ~4 s on entering CD mode
+- [ ] Version banner "6.1.5 R1.16" shows ~4 s on entering CD mode
 - [ ] "CONNECTED" flashes when the phone attaches
 - [ ] Preset 1 → "PAIRING" on SID + phone sees BlueSaab
 - [ ] Extra-long middle SEEK (>2 s) → same pairing behavior (new)
@@ -120,7 +120,7 @@ In-car phase (any 9-3/9-5; extra valuable on a 9-5 — the 0x6A2 path is new):
 - [ ] Observation task: note when the IHU sends pause events 0xB1/0xB0
       (unblocks the deferred pause feature)
 
-Release v6.1.4 (tag + `gh release create` with CI artifacts) only after the
+Release v6.1.5 (tag + `gh release create` with CI artifacts) only after the
 in-car phase passes.
 
 Out of scope for v6.2: config system, shuffle, multi-device (RN52 can't).
@@ -134,7 +134,7 @@ removal A3.
       long-press SEEK was v5 behavior and does nothing in 6.1.1)
 - [x] iPhone pairing issue resolved: preset 1 confirmed working in-car (2026-07-22);
       old docs incorrectly listed long-press SEEK / preset 1 as volume up
-- [ ] Consider mapping `SEEK_MIDDLE_EXTRA_LONG` to `bluetooth.discoverable()` so
+- [x] ~~Consider mapping `SEEK_MIDDLE_EXTRA_LONG` to `bluetooth.discoverable()`~~ — done in v6.1.3; was:
       steering-wheel-only cars can pair without the head unit preset buttons
 - [ ] Recover v6 CAD sources if they exist (only v5 Eagle files are in the repo)
 - [ ] Note: mbed OS 2 and mbed-rtos are dead (Arm shut Mbed down in 2024). Libraries
