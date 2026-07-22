@@ -106,6 +106,19 @@ RN52 emits uppercase in practice; latent only. One-line fix.
   on track change it queries the RN52 (`AD`) and feeds the scroller; the
   static "BlueSaab v6" text is only the fallback. USAGE_v6.md updated.
 
+## Deployed-unit findings (to fill in after bench session)
+
+The project's own unit reportedly always shows the static "BlueSaab v6"
+text. Candidate causes and the diagnosis recipe are in USAGE_v6.md
+troubleshooting (firmware age vs RN52 < 1.16 vs dead event chain). Also
+confirmed during this investigation: **no power-saving code exists in
+v6.1.1** — `main()` idles, `bt_pwren_pin` stays 1, transceiver sleep pins
+unused; ~25 mA constant draw is inherent to this firmware.
+
+- [ ] Boot banner version on the unit: ___
+- [ ] RN52 module firmware version (`d`): ___
+- [ ] Metadata behavior on track change: ___
+
 ## Recommended policy (v6 frozen)
 
 Nothing here forces a v6 release. If one ever happens anyway, the

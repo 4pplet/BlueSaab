@@ -104,3 +104,12 @@ Single-character commands (no Enter needed):
   serial to wipe the paired device list, then pair fresh.
 - **No audio but connected:** press NXT (play/pause) — some phones wait for an
   AVRCP play command before streaming.
+- **SID always shows static "BlueSaab v6", never track names:** three causes,
+  distinguishable over the serial console —
+  1. BlueSaab firmware predates Aug 2018 (metadata scrolling didn't exist):
+     check the boot banner, current source prints `Firmware version: 6.1.1`;
+  2. RN52 module firmware < 1.16 (the `AD` track-data command was added in
+     1.16): send `d` and read the reported RN52 version;
+  3. the RN52 GPIO2 event chain isn't firing (no track-change polls): with
+     music playing, change tracks and watch for `Q`/`AD` activity.
+  With old RN52 firmware, static text is expected — everything else works.
