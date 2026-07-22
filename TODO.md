@@ -50,7 +50,12 @@ and app logic.
 - [ ] Decide audio output path: ESP32 internal DAC is poor — external I2S DAC
       (e.g. PCM5102) for line-level output
 - [ ] Schematic + PCB in an open tool (KiCad) so the design files are truly OSS
-- [ ] Power supply: 12 V automotive input (load-dump tolerant) → 3.3 V
+- [ ] Power supply: 12 V automotive input (load-dump tolerant) → 3.3 V via
+      low-quiescent buck (AP63203-class)
+- [ ] Sleep architecture: ESP32 deep sleep on I-Bus silence, wake on CAN RXD
+      edge via EXT0/EXT1 GPIO; target < 100 µA total draw when parked
+      (CDC 12 V is battery-fed, not ignition-switched — v6 idles at ~15-30 mA
+      forever, the successor must not)
 
 ## Phase 3 — Community
 

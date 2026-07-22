@@ -140,6 +140,32 @@ Net effect: the successor board is the v6 **audio output stage and CAN front
 end unchanged**, wrapped around one ESP32 + I2S DAC + buck converter instead
 of two chips and a linear regulator.
 
+## Power management (parked-car current draw)
+
+The CDC connector's 12 V is **battery-fed, not ignition-switched** — the
+device is always powered. v6 idles the LM1117 + STM32 + RN52 continuously
+(order of 15–30 mA, ~0.5 Ah/day), acceptable for a daily driver but hard on a
+car that sits for weeks. An ESP32 doing nothing would be worse (40–80 mA), so
+sleep handling is a **hard requirement**, not an optimization:
+
+- **ESP32 deep sleep** (~10 µA) whenever the I-Bus has been silent for a few
+  minutes. The SAAB buses go quiet when the car is locked, so bus silence ==
+  car asleep.
+- **Wake on bus activity**: TWAI doesn't run in deep sleep, but the CAN
+  transceiver's RXD idles high (recessive) and any frame produces a falling
+  edge — route RXD to an EXT0/EXT1 wakeup GPIO. First frames after unlock wake
+  the chip; full boot + BT stack is ~1–2 s, well inside the time it takes the
+  driver to reach the CD button. (The first wake-up frame is missed —
+  irrelevant, the IHU polls node status continuously.)
+- **CAN transceiver sleep**: the SN65HVD234's RS/EN pins (already wired to the
+  MCU in v6) give it a sub-µA listen/sleep mode that still passes RXD edges.
+- **Low-quiescent buck**: pick for Iq, e.g. AP63203 (~22 µA) — a lesser buck's
+  quiescent current would dominate the whole sleep budget.
+
+Sleep-state target: **< 100 µA total** from 12 V — years of parking, ~500×
+better than v6. Firmware obligation: the main loop must track bus silence and
+enter deep sleep; there is no ignition signal to lean on.
+
 Open decisions:
 
 - [ ] Project name (it's a spiritual successor, not "BlueSaab v7" — or is it?)
