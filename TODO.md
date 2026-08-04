@@ -96,6 +96,18 @@ RTC alarm (LSI) wakes every ~20 s for a ~ms IWDG kick, ~0.02 % duty.
 Bench-verify: HVD234 standby RXD wake behavior per datasheet; stop-exit
 clock + mbed RTX tick restore.
 
+**Sleep risk register (beyond "doesn't wake"):** (1) wakes-wrong — botched
+clock/RTOS/CAN restore skews protocol timing → the warning-lamp failure
+class; treat wake as full reboot, check `E` after wake cycles. (2)
+doesn't-sleep — symptomless 25 mA drain; only a current meter proves sleep.
+(3) wake-storm — if the locked car's I-Bus is NOT truly silent (alarm/TWICE
+chirps?), the unit oscillates awake and may drain worse than no sleep;
+**prerequisite: overnight parked-bus activity measurement** (add an RX
+frame counter to `E` in a 6.1.7 dev build, read it after 8 h locked). (4)
+watchdog-kick slip → nightly reset cycles; visible via the reset counter.
+(5) wrong-moment sleep — threshold tuning. (6) sleeping unit looks dead on
+the bench — document "wake first / BOOT0 still works".
+
 6.1.7 validation plan (watchdog/sleep are "anti-features" — must NEVER act
 normally, ALWAYS act when needed — so observability gets built in):
 
