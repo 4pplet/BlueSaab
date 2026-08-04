@@ -30,6 +30,21 @@ Bluetooth audio via a Microchip RN52 module.
 - Editable sources (Eagle) exist only for v5.0; v6 is PDF + BOM only. If the v6 CAD
   files can be recovered, add them here.
 
+## Interim mod: inline power switch
+
+Until the sleep firmware exists (see TODO.md, 6.1.7), the unit draws ~25 mA
+continuously — enough to trouble a battery in weeks of parking, hence the
+unplug-when-unused ritual. A cleaner interim fix: splice a small automotive
+toggle switch into the **12 V wire (connector pin 6)** near the plug.
+
+- Switching only 12 V is electrically clean: an unpowered CAN transceiver is
+  high-impedance on the bus, the silent audio stage is harmless, and the car
+  simply sees "no changer" — identical to unplugging.
+- Any small switch works (~250 mA peak load). No enclosure or board changes.
+- Caveat: manual = forgettable in both directions (drain anyway / "why is
+  Bluetooth dead?"). The 6.1.7 sleep firmware (~6 mA parked) and the
+  optional LDO mod (~0.2 mA) make this switch obsolete by design.
+
 ## Planned successor direction
 
 Replace both the STM32 and the RN52 with a single **ESP32** (the original ESP32 —
