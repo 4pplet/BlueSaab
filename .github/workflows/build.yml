@@ -30,3 +30,17 @@ jobs:
             BUILD/BlueSaab.bin
             BUILD/BlueSaab.hex
             BUILD/BlueSaab.elf
+
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Scroller + utf_convert unit tests on the host, in both char
+      # signednesses (the target builds with -funsigned-char).
+      - name: Build and run host tests
+        run: |
+          g++ -funsigned-char -I test/stubs -I . test/host_tests.cpp Scroller.cpp utf_convert.cpp -o host_tests_u
+          ./host_tests_u
+          g++ -fsigned-char -I test/stubs -I . test/host_tests.cpp Scroller.cpp utf_convert.cpp -o host_tests_s
+          ./host_tests_s
