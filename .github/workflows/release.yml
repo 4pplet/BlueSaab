@@ -1,0 +1,46 @@
+name: release
+
+# Pushing a tag vX.Y.Z builds the firmware and creates a DRAFT release with
+# the binaries + SHA256SUMS and the matching CHANGELOG section as notes.
+# Nothing is published automatically: compare the .bin hash in SHA256SUMS
+# with the hash of the binary that was validated in the car, then publish.
+# (CI builds are byte-reproducible, so they match.)
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: carlosperate/arm-none-eabi-gcc-action@98c40e51546516419841748d3210c290df0d2c6c # v1.13.0
+        with:
+          release: '8-2019-q3'
+
+      - name: Tag must match FIRMWARE_VERSION
+        run: |
+          v=$(sed -n 's/^#define FIRMWARE_VERSION[[:space:]]*"\(.*\)"/\1/p' SaabCan.h)
+          [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "::error::tag $GITHUB_REF_NAME != FIRMWARE_VERSION $v"; exit 1; }
+
+      - run: make EXTRA_FLAGS=-Werror
+
+      - name: Package
+        run: |
+          mkdir dist
+          for e in bin hex elf; do cp BUILD/BlueSaab.$e "dist/BlueSaab-$GITHUB_REF_NAME.$e"; done
+          (cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS >> "$GITHUB_STEP_SUMMARY")
+
+      - name: Draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sed -n "/^## ${GITHUB_REF_NAME#v} /,/^## /p" CHANGELOG.md | sed '$d' > notes.md
+          gh release create "$GITHUB_REF_NAME" dist/* --draft --verify-tag \
+            --title "BlueSaab firmware $GITHUB_REF_NAME" --notes-file notes.md

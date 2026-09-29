@@ -3,44 +3,81 @@ name: build
 on:
   push:
     branches: ['**']
+  pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   firmware:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # Every compile-time variant the docs mention is built (warnings are
+        # errors), so none of them can bit-rot. Only 'release' is uploaded.
+        variant:
+          - { name: release,  flags: '' }
+          - { name: no-sid,   flags: '-DSID_TEXT_CONTROL_ENABLED=0' }
+          - { name: no-beep,  flags: '-DCDC_ENTRY_BEEP_ENABLED=0' }
+          - { name: stackmon, flags: '-DSTACK_MONITOR_ENABLED=1' }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Pin the GCC 8 era verified locally (docs/BUILD_v6.md) — newer
       # majors are untested against the vendored mbed OS 2 sources.
-      - uses: carlosperate/arm-none-eabi-gcc-action@v1
+      # CI output is byte-reproducible; this is the canonical release toolchain.
+      - uses: carlosperate/arm-none-eabi-gcc-action@98c40e51546516419841748d3210c290df0d2c6c # v1.13.0
         with:
           release: '8-2019-q3'
 
-      - name: Build
-        run: make
+      - name: Build (${{ matrix.variant.name }})
+        run: make EXTRA_FLAGS="-Werror ${{ matrix.variant.flags }}"
 
       - name: Size
         run: arm-none-eabi-size BUILD/BlueSaab.elf
 
-      - uses: actions/upload-artifact@v4
+      - name: Checksums + artifact name
+        if: matrix.variant.name == 'release'
+        id: meta
+        run: |
+          v=$(sed -n 's/^#define FIRMWARE_VERSION[[:space:]]*"\(.*\)"/\1/p' SaabCan.h)
+          echo "name=BlueSaab-$v-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          (cd BUILD && sha256sum BlueSaab.bin BlueSaab.hex | tee SHA256SUMS >> "$GITHUB_STEP_SUMMARY")
+
+      - if: matrix.variant.name == 'release'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: BlueSaab-firmware
+          name: ${{ steps.meta.outputs.name }}
           path: |
             BUILD/BlueSaab.bin
             BUILD/BlueSaab.hex
             BUILD/BlueSaab.elf
+            BUILD/SHA256SUMS
+          if-no-files-found: error
 
   host-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Scroller + utf_convert unit tests on the host, in both char
-      # signednesses (the target builds with -funsigned-char).
+      # Scroller + utf_convert unit tests on the host: target C++ dialect,
+      # warnings as errors, ASan/UBSan, both char signednesses (the target
+      # builds with -funsigned-char).
       - name: Build and run host tests
         run: |
-          g++ -funsigned-char -I test/stubs -I . test/host_tests.cpp Scroller.cpp utf_convert.cpp -o host_tests_u
-          ./host_tests_u
-          g++ -fsigned-char -I test/stubs -I . test/host_tests.cpp Scroller.cpp utf_convert.cpp -o host_tests_s
-          ./host_tests_s
+          mkdir -p BUILD
+          for s in unsigned signed; do
+            g++ -std=gnu++98 -f$s-char -Wall -Wextra -Werror -g \
+                -fsanitize=address,undefined \
+                -I test/stubs -I . test/host_tests.cpp Scroller.cpp utf_convert.cpp \
+                -o BUILD/host_tests_$s
+            BUILD/host_tests_$s
+          done
