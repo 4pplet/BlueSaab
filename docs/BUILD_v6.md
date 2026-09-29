@@ -97,8 +97,10 @@ Releasing a firmware version:
    section `## x.y.z …`.
 2. Push; wait for CI green; **validate the CI artifact on real hardware**
    (bench + car, per the TODO.md checklist) and **record its `.bin` SHA-256**.
-3. Tag the exact commit you validated, on the branch that becomes `master`:
-   `git tag -a v6.x.y <sha> -m "BlueSaab firmware v6.x.y"` then
+3. Fast-forward `master` (the release branch; `revival` is the dev branch —
+   never rebase it) and tag the exact commit you validated:
+   `git push origin revival:master`, then
+   `git tag -a v6.x.y <sha> -m "BlueSaab firmware v6.x.y"` and
    `git push origin v6.x.y` (not `--tags`).
 4. The tag triggers `.github/workflows/release.yml`: it checks that the tag
    matches `FIRMWARE_VERSION`, rebuilds, and creates a **draft** release with
