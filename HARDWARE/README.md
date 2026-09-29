@@ -11,7 +11,6 @@ Bluetooth audio via a Microchip RN52 module.
 | `BlueSaab_v6.PDF` | Schematic for hardware v6 (targeted by all 6.1.x firmware) |
 | `BOM_PartType-BlueSaab_v6_1_1.csv` | Bill of materials for v6.1.1 |
 | `BlueSaab v5.0/` | Full v5.0 design: Eagle `.sch`/`.brd` sources plus PDF exports ("RN52 v5.0 + 10pin"); the `.zip` inside holds the v5.0 **Gerbers** |
-| `BlueSaab v5.0.zip` | Zipped copy of the v5.0 folder (duplicate) |
 | `Hardware - Installing BlueSAAB module in cars without CDC provisioning cable.pdf` | Install guide for cars lacking the CDC pre-wiring |
 | `Screen_Shot_2016-10-26_at_09.png` | Reference screenshot (2016) |
 

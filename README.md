@@ -1,6 +1,6 @@
 # BlueSaab
 
-[![build](https://github.com/4pplet/BlueSaab/actions/workflows/build.yml/badge.svg?branch=revival)](https://github.com/4pplet/BlueSaab/actions/workflows/build.yml)
+[![build](https://github.com/4pplet/BlueSaab/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/4pplet/BlueSaab/actions/workflows/build.yml)
 
 A CD-changer emulator that brings Bluetooth audio to classic SAAB cars.
 BlueSaab plugs into the CD-changer connector, speaks the SAAB I-Bus CAN

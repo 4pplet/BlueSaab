@@ -101,15 +101,13 @@ recorded one, then publish.
       byte-reproducible); CI builds 4 variants with `-Werror`, runs host
       tests with sanitizers, pinned actions + Dependabot; tag-triggered
       draft releases
-- [ ] Branch strategy (needs a decision): `master` and `new` are the 2019
-      snapshot; all work is on `revival`, so visitors to the fork's default
-      branch see no README or LICENSE. Proposal: fast-forward `master` to
-      `revival` before tagging 6.1.7 (`git push origin revival:master`), and
-      delete the stale local `new`
-- [ ] Remove the duplicate `HARDWARE/BlueSaab v5.0.zip` (same 5 files as the
-      folder; the zip *inside* the folder holds the Gerbers — keep that)
-- [ ] Fork settings: enable issues + a bug template (boot banner, RN52
-      version, car/year, head unit, phone), add topics, README CI badge
+- [x] Branch strategy (2026-09-29): `master` fast-forwarded to `revival`
+      and is the default/release branch; `revival` stays the dev branch and
+      is fast-forwarded into `master` at each release (never rebase it).
+      Stale local `new` deleted.
+- [x] Duplicate `HARDWARE/BlueSaab v5.0.zip` removed (byte-identical to the
+      folder; the zip *inside* the folder holds the Gerbers and stays)
+- [x] Fork settings: issues enabled + bug template, topics, README CI badge
 - [ ] Recover v6 CAD sources if they exist (only v5 Eagle files are here)
 
 ## Phase 1 — Keep v6 alive
