@@ -1,7 +1,8 @@
-# v6.1.1 code audit — correctness & robustness findings
+# v6 code audit — correctness & robustness findings (6.1.1 baseline → 6.1.7)
 
-Audit date 2026-07-22, full read of the firmware source. Scope: bugs and
-robustness only — **no feature work** (v6 is frozen; see TODO.md). Each
+First audit 2026-07-22, full read of the firmware source; later rounds are
+appended below (newest: 2026-09-29 deep audit → 6.1.7). Scope at the time:
+bugs and robustness only (v6 firmware work later resumed as 6.1.2+). Each
 finding notes whether it matters for a possible v6 patch and/or as a
 "don't port this" flag for the ESP32 successor.
 
@@ -100,7 +101,7 @@ RN52 emits uppercase in practice; latent only. One-line fix.
 ## Facts discovered that correct earlier docs
 
 - v6 **already sets RN52 gain to max at boot** (`RN52_SET_MAXVOL` = `SS,0F`
-  in `RN52::initialize`) — the v6.2 menu item claiming otherwise is wrong
+  in `RN52::initialize`) — the earlier TODO menu item claiming otherwise was wrong
   and has been removed.
 - v6 **already shows scrolling track metadata** (artist – title) on the SID:
   on track change it queries the RN52 (`AD`) and feeds the scroller; the
@@ -111,13 +112,92 @@ RN52 emits uppercase in practice; latent only. One-line fix.
 The project's own unit reportedly always shows the static "BlueSaab v6"
 text. Candidate causes and the diagnosis recipe are in USAGE_v6.md
 troubleshooting (firmware age vs RN52 < 1.16 vs dead event chain). Also
-confirmed during this investigation: **no power-saving code exists in
+confirmed during this investigation: **no STM32-side power saving exists in
 v6.1.1** — `main()` idles, `bt_pwren_pin` stays 1, transceiver sleep pins
-unused; ~25 mA constant draw is inherent to this firmware.
+unused. The RN52 itself is configured to power off after 10 min unconnected
+(`S^,600`). Parked draw is unmeasured (estimate 15–30 mA).
 
-- [ ] Boot banner version on the unit: ___
-- [ ] RN52 module firmware version (`d`): ___
+- [ ] Boot banner version on the unit: ___ (also:
+      `strings backup_v6_unit.bin | grep -i version` on the flash backup)
+- [ ] RN52 module firmware version (`RN52 version:` boot line after flashing
+      6.1.2+ — `d` only prints the Bluetooth address): ___
 - [ ] Metadata behavior on track change: ___
+
+## Deep audit (2026-09-29, four reviewers → v6.1.7)
+
+Whole repo re-audited: firmware (fresh eyes, disassembly checked against the
+vendored RTX sources), docs vs code, CI/release, and external facts against
+datasheets. The firmware findings below are fixed in 6.1.7 unless marked
+otherwise.
+
+Permanent-halt paths fixed (no watchdog exists, so each was a unit that
+stays dead until its power is cut):
+
+- **Regression from 6.1.6:** `can_frequency()` gave INAK 2 ms and then called
+  `error()`. Since 6.1.6 constructs the CAN object at 47.619 kbit/s, the
+  controller is bus-synchronized when `SaabCan::initialize()` re-applies the
+  bitrate, so entering init mode waits out the frame in flight (up to
+  ~2.8 ms) — ~1-2 % of boots with an active bus halted. Now 20 ms, no
+  `error()`, the INRQ request is withdrawn on timeout, and HAL init runs in
+  silent mode so the placeholder 1.2 Mbit/s timing can't put error flags on
+  the bus.
+- ID-0 CAN frame → the empty callback slots (id 0) → `Callback::call` →
+  `MBED_ASSERT(_ops)` → `mbed_die`. Standard, extended, data or remote.
+  Now: only standard data frames are dispatched, and only to set slots.
+- RN52 command `Queue` overflow inside RTX: ISR-posted messages are only
+  counted at PendSV, so two posts from one ISR (CDC-on posts two) into a
+  queue at 19/20 both pass → `OS_ERR_MBX_OVF` → halt. Needs a stalled RN52
+  thread to fill the queue. Now an own occupancy count, updated under a
+  critical section at post time, refuses at 18.
+- `can_init_freq()` still called `error()` on HAL-init / bitrate failure
+  (stuck-dominant bus at boot). Now logged and retried in
+  `SaabCan::initialize()`.
+
+Other fixes: TX frames retried ~20 ms when all 3 mailboxes are busy
+(previously dropped at once — a lost 0x6A2 breaks the 9-5 handshake);
+invalid UTF-8 / Latin-1 metadata no longer swallows following letters
+(host-tested, fuzzed); `showTemporary()` fully atomic (PRIMASK save/restore,
+safe from ISR and thread); SID event flag volatile and captured atomically;
+four 256-byte stacks → 320 (estimated 80-86 % full); banner buffer size
+checked at compile time; debug help text corrected.
+
+RAM budget (6.1.6 figures from the ELF): static 10.0 KB, heap used ~5.1 KB
+(thread stacks are heap-allocated in `Thread::start`), ~1.3 KB free in the
+heap's top chunk before these stack increases (~1.0 KB after). Nothing
+allocates after boot, so it is not a live risk, but it is a hard ceiling
+for 6.2.0 — a new thread or buffer of more than ~1 KB halts at boot.
+Reclaimable if needed: `OS_TIMERS=0` (−800 B, RTX timers unused), logThread
+1536→1024 (−512 B), log mailbox 64→32 (−~390 B), idle stack 512→256.
+
+Open — design input for 6.2.0, not fixed here:
+
+- **The node transmits forever, even into a parked, silent bus.** 0x3C8
+  (every 950 ms) and 0x357 (every 1 s) are sent unconditionally. With
+  nothing ACKing, the controller goes error-passive (never bus-off) and
+  retransmits back-to-back indefinitely: extra transceiver current, maybe
+  keeping other nodes awake, and it would make an RX-counter "is the parked
+  bus silent?" measurement meaningless. Fix: gate periodic TX on bus
+  liveness (a frame received from another node in the last ~2 s) and abort
+  pending mailboxes (`TSR.ABRQx`) when the bus goes quiet.
+- The RN52 thread retries the command-mode handshake forever (1 Hz) if the
+  module never answers — Bluetooth dead while the thread looks alive.
+  Needs escalation (power-cycle via PWREN after N failures) and a
+  progress-based watchdog check. Related open question: what `S^,600`
+  auto power-off actually requires to wake the module.
+- Idle thread busy-spins at 72 MHz (empty idle hook); a `__WFI()` hook is a
+  cheap current saving — measure it.
+- Init could be split so RN52 start-up (5 s) never delays the CAN side
+  (matters if 6.2.0 treats wake as a full reboot).
+- NITs: DLC ignored (handlers read `data[]` regardless of `len`), async
+  serial re-arm results unchecked, `txDropped++` not atomic.
+
+Halt-path inventory after 6.1.7 (what the 6.2.0 watchdog must cover): RTX
+stack overflow (detected only at context switch), heap exhaustion at boot
+(latent), HardFault (default `b .`), crystal failure loop at boot, and the
+"alive but useless" RN52 retry loop. The IWDG covers all halts — `mbed_die`
+disables interrupts but the IWDG is independent — but not the RN52 loop,
+which needs a progress check. Kick it from a thread that checks heartbeats
+(CDCStatus 950 ms, SidResource 1 s, logThread 1 s), never from an ISR.
 
 ## Bug hunt (2026-07-22, three adversarial reviewers → v6.1.6)
 
@@ -182,8 +262,10 @@ TSEG1 15/TSEG2 5, sample point 76.19 %, SJW 2, BTR 0x014E0023 →
 - **Open:** B6 (remaining ISR-context frame callbacks — Buttons/CDCStatus
   handlers still run in the RX interrupt; they only queue/signal, which is
   ISR-safe, but the successor should dispatch to a task regardless).
-  (B2/B4/B5 fixed across 6.1.4–6.1.6.)
-- **Design gap (found 2026-07-22, planned for 6.1.7): no watchdog.** The
+  (B2/B5 fixed; B4 partially — the stack monitor is available via
+  `STACK_MONITOR_ENABLED` and stacks were raised, but margins have not been
+  measured on hardware yet.)
+- **Design gap (found 2026-07-22, planned for 6.2.0): no watchdog.** The
   IWDG is never enabled, on an always-powered device with no reachable
   reset — any firmware hang persists until the harness is unplugged, with
   ~25 mA battery drain. The successor must also treat a watchdog (ESP32

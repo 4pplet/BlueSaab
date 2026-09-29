@@ -2,69 +2,89 @@
 
 CD changer emulator for older SAAB cars (9-3/9-5 with I-Bus): the car's head unit
 thinks it's talking to a CD changer over CAN, while audio actually streams from a
-phone over Bluetooth (Microchip RN52 module). Firmware v6.1.1, hardware v6.1.
+phone over Bluetooth (Microchip RN52 module). Hardware v6.1. Firmware: the last
+release is v6.1.1 (2019); the tree is v6.1.7, unreleased pending in-car
+validation (`FIRMWARE_VERSION` in `SaabCan.h`, history in `CHANGELOG.md`).
 
 Lineage: this repo is the mbed/STM32 rewrite of the Arduino-era "SAAB-CDC"
 codebase (github.com/kveilands/SAAB-CDC, forks incl. si1/SAAB-CDC) — same
 authors, same RN52 concept, ATmega + MCP2515 hardware. That generation had a
 different button map (long-press SEEK = pairing, presets 1/2/4 = volume);
-old user docs describing those buttons refer to it, not to 6.1.1. Its commit
+old user docs describing those buttons refer to it, not to 6.1.x. Its commit
 history is a useful I-Bus protocol reference.
 
 ## Build
 
 - Target: STM32F103RB (Cortex-M3), mbed OS 2 "classic" + mbed-rtos (both vendored
-  in-repo — mbed is dead upstream since 2024, never try to update these libs online)
-- Toolchain: `arm-none-eabi-gcc`, plain `make` (see `Makefile`)
-- Output goes to `BUILD/` (gitignored)
+  in-repo; the HAL is prebuilt `libmbed.a`). Arm retired Mbed in July 2026 and
+  its URLs are dead — never try to update these libs.
+- Toolchain: `arm-none-eabi-gcc` 8, plain `make` (see `Makefile`); variants via
+  `make EXTRA_FLAGS="-Werror -D…"`. Output goes to `BUILD/` (gitignored).
+- CI (`.github/workflows/build.yml`) is the canonical, byte-reproducible release
+  toolchain; host unit tests live in `test/`. Always pass `--repo 4pplet/BlueSaab`
+  to `gh` — this checkout also has the upstream repo as a remote.
 
 ## Architecture
 
-- `main.cpp` — boots RTOS threads, initializes subsystems
-- `SaabCan.*` — I-Bus CAN node emulation @ 47.619 kbps; frame IDs defined in `SaabCan.h`
-- `CDCStatus.*` — emulated CD changer state machine; handles CDC mode on/off
-  (on: RN52 goes connectable + reconnects last phone; off: disconnects)
+- `main.cpp` — boots RTOS threads; initializes CAN-side subsystems first, then
+  Bluetooth (which blocks ~5 s while the RN52 reboots)
+- `SaabCan.*` — I-Bus CAN node @ 47.619 kbps: RX dispatch (ISR), TX thread,
+  health counters; CDC frame IDs in `SaabCan.h`
+- `CDCStatus.*` — emulated CD changer: CDC mode on/off, 0x3C8 status, and
+  `NodeStatusSender` (the single sender of all 0x6A2 node-status replies)
 - `Buttons.*` — decodes head unit / steering wheel buttons from frame `0x3C0`.
-  Preset 1 = discoverable (pairing), preset 3 = reconnect, preset 6 = disconnect.
-  Long SEEK presses are decoded but intentionally unhandled since v6.
-- `SidResource.*` / `Scroller.*` / `utf_convert.*` — scrolling text on the SID
-  dashboard display; compiled out unless `SID_TEXT_CONTROL_ENABLED`
-- `common/` — RN52 driver: `Bluetooth` (high-level API), `RN52` (serial command
-  protocol), `SerialLog`/`SerialRX` (debug console), mbed glue (`can_api.c`)
+  Preset 1 = discoverable, 3 = reconnect, 4/5 = volume down/up (AVRCP to the
+  phone, 6.1.3+), 6 = disconnect; extra-long middle SEEK (0x88, >2 s) =
+  discoverable (6.1.3+). Long SEEK± (0x45/0x46), long middle SEEK (0x84),
+  RANDOM, pause on/off and preset 2 are decoded but unhandled.
+- `SidResource.*` / `Scroller.*` / `utf_convert.*` / `MessageSender.*` — SID
+  text: request/grant handshake (0x357/0x368), 3-frame writes (0x337), banner,
+  PAIRING/CONNECTED notices, scrolling metadata. On by default
+  (`SID_TEXT_CONTROL_ENABLED 1` in `SidResource.h`); 0 disables the SID calls.
+- `common/` — RN52 driver: `Bluetooth` (high-level API + debug console),
+  `RN52` (serial command protocol), `SerialLog`/`SerialRX`, and `can_api.c`
+  (our override of the mbed bxCAN driver)
+- `test/` — host unit tests (Scroller, utf_convert), run by CI
+
+No watchdog exists yet (planned for 6.2.0), so any halt path (`error()`,
+`MBED_ASSERT`, RTX `os_error`) is permanent in the car — avoid them.
 
 ## Debug serial console
 
-Single-char commands (see `Bluetooth::handleDebugChar`): `V` discoverable,
-`I` connectable, `C` reconnect, `D` disconnect, `P`/`N`/`R` playback, `B` reboot
-RN52, `H` help.
+2-pin UART2 header, 115200 8N1, 3.3 V, no GND pin. Single-char commands (see
+`Bluetooth::handleDebugChar`): `V` discoverable, `I` connectable, `C` reconnect,
+`D` disconnect, `P`/`N`/`R` playback, `A` voice assistant, `B` reboot RN52,
+`d` RN52 Bluetooth address (`BTA=`), `u` wipe all pairings, `E` CAN health
+counters, `H` help. 6.1.2+ logs `RN52 version: x.xx` at boot.
 
 ## Documentation map
 
 - `README.md` — project front door; `LICENSE` — GPL-3
-- `CHANGELOG.md` — firmware version history (6.1.2+ unreleased pending bench)
+- `CHANGELOG.md` — firmware version history (6.1.2–6.1.7 unreleased, ship as 6.1.7)
 - `docs/USAGE_v6.md` — v6 user manual (button map is the successor's interface contract)
-- `docs/V6_CODE_AUDIT.md` — code audit: known bugs, don't-port-this list for the successor
-- `docs/BUILD_v6.md` — building/flashing v6 (verified toolchain: ARM GCC 8.5)
-- `docs/FLASHING_v6_HOWTO.md` — step-by-step flash guide (SWD + serial bootloader)
+- `docs/V6_CODE_AUDIT.md` — every audit round's findings + halt-path inventory; don't-port-this list
+- `docs/BUILD_v6.md` — toolchain, CI, release process
+- `docs/FLASHING_v6_HOWTO.md` — step-by-step flash guide (serial bootloader + SWD)
 - `docs/IBUS_PROTOCOL.md` — the I-Bus CDC protocol spec (canonical upstream source is dead; this is the capture)
 - `docs/SUCCESSOR_HARDWARE_OPTIONS.md` — successor design + decisions
 - `docs/SUCCESSOR_PARTSLIST.md` — block-by-block parts list, keyed to v6 designators
 - `docs/SAAB_9-5_NOTES.md` — 9-5 research, model quirks
 - `docs/RELATED_PROJECTS.md` — lineage, competitors, 2006+ landscape
-- `HARDWARE/README.md` — board files
-- `TODO.md` — roadmap
+- `HARDWARE/README.md` — board files, headers, interim power-switch mod
+- `TODO.md` — roadmap and the 6.1.7 validation checklist
 
 ## Project direction
 
-See `TODO.md`. Short version: v6 **hardware** is frozen (RN52 EOL) and RN52
-module firmware updates are avoided (brick risk, metadata-only benefit) —
-but v6 **STM32 firmware** improvement resumed 2026-07 (v6.1.2+): small QOL
-items from the TODO menu, built/released via GitHub Actions CI (see
-`docs/BUILD_v6.md` release process). The ESP32 successor remains the main
-track and must not be delayed by v6 work. All effort goes to the ESP32 spiritual
+See `TODO.md`. v6 **hardware** is frozen: the RN52 went end-of-life in 2024
+(Microchip PCN, last shipment June 2024), so v6 can no longer be manufactured.
+RN52 module firmware updates are avoided (brick risk, metadata-only benefit).
+v6 **STM32 firmware** work continues: 6.1.7 is being validated, 6.2.0
+(watchdog + sleep) is planned. The main track is the ESP32 spiritual
 successor (A2DP sink + built-in TWAI CAN, `docs/SUCCESSOR_HARDWARE_OPTIONS.md`),
-whose primary purpose is production continuity: the RN52 is EOL, so v6 can no
-longer be manufactured. Ship a buildable v6-equivalent first; features second. Hard requirement:
-the successor keeps the v6.1.1 in-car interface as a baseline (`docs/USAGE_v6.md`);
-improvements (e.g. multi-device swapping) must be additive on unused buttons,
-never repurpose an existing one. `HARDWARE/` holds board files — see `HARDWARE/README.md`.
+whose primary purpose is production continuity — ship a buildable
+v6-equivalent first; features second; v6 work must not delay it. Hard
+requirement: the successor keeps the released v6 in-car interface
+(`docs/USAGE_v6.md`, incl. the 6.1.3 additions); improvements (e.g.
+multi-device swapping) must be additive on unused buttons, never repurpose an
+existing one. Hardware claims must be checked against datasheets — an earlier
+"drop-in" LDO recommendation turned out to have an incompatible pinout.

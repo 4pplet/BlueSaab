@@ -56,8 +56,11 @@ use the Wayback captures linked below.
    (wrong first byte, e.g. 0x64 instead of 0x32, on a 2004 9-5). The
    0x32/0x42/0x52/0x62 reply sequence in v6 encodes the fix.
 3. **Buttons can go dead until source is switched away and back** — 9-5
-   only; suspected 0x6A1/0x6A2 timing. The real CDC also sends a different
-   status when the IHU is not in CDC mode (never implemented in v6).
+   only; suspected 0x6A1/0x6A2 timing. Reportedly the real CDC also sends
+   a different status when the IHU is not in CDC mode. v6 only varies 0x3C8
+   bytes 1-3 (`FF 3F 41` active vs `00 01 01` idle); which other bytes/frames
+   the real changer changes is not documented — needs a bus capture from a
+   real CDC to act on.
 4. **SID text flicker** on some cars (both 9-3 and 9-5 reported) — the
    0x348/0x368 display-resource handshake is timing-sensitive; get the
    grant before writing, re-request each ~1 s.
@@ -65,13 +68,16 @@ use the Wayback captures linked below.
    reset the MIU and SID and is suspected of causing spurious warning
    lights via diagnostics starvation.
 6. **Beeps (0x430) aggravate the 9-5** — debugging advice from the field
-   was "remove the beeps". v6 already dropped beep feedback.
+   was "remove the beeps". v6 dropped the v5 multi-beep button feedback but
+   still sends one 0x430 beep on CDC entry by default; since 6.1.3 it can be
+   compiled out (`CDC_ENTRY_BEEP_ENABLED 0`).
 7. **Audio variants (AS1/AS2/AS3 — internal amp / Pioneer / H-K)**: no
    difference for emulators; CDC input is always balanced line-level into
    the head unit. Drive balanced outputs (v6's THS4522 stage does).
 8. **Night panel**: no documented CDC quirk; the SID blanks text in night
    panel, which users can mistake for a device fault.
-9. **Steering-wheel frames are identical 9-3 vs 9-5** (0x290, 0x3C0/0x3C8);
+9. **Steering-wheel frames are identical 9-3 vs 9-5** (0x290 raw, 0x3C0
+   IHU→CDC);
    only physical button layouts differ. The one protocol delta is the
    0x6A1/0x6A2 strictness above.
 

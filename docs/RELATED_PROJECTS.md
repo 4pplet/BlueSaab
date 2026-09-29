@@ -34,15 +34,17 @@ Intelligence worth noting from their compatibility claims:
   gain matters to users; consider a configurable gain option in the successor.
 
 Differentiators the successor has that CDConnect lacks: SID text, multi-device
-pairing/swap, open source hardware+firmware, sub-100 µA parked draw (unknown
+pairing/swap, open source hardware+firmware, a sub-100 µA parked-draw target (unknown
 for CDConnect, but worth beating).
 
 ## How 2006+ cars are handled (out of our scope, for the record)
 
-The 2006 9-5 / 2007 9-3 facelift head units (black Fujitsu) **dropped the
-external CD-changer input** — that's why every CDC-based device stops at 2005.
-Aftermarket solutions for those cars impersonate a different factory
-accessory:
+The 2006+ 9-5 **base** head units (black Fujitsu / GM "EHU", on a new
+single-wire bus) are reported to lack the CDC input — which is why
+commercial CDC devices stop at 2005. Denso-nav 2006 9-5s kept it (BlueSaab is
+confirmed working on one; see SAAB_9-5_NOTES.md). The "2007 9-3" is the Sport
+Sedan platform (GMLAN), never CDC-compatible. Aftermarket solutions for the
+cars without a CDC input impersonate a different factory accessory:
 
 - **BT Changer** (bt-changer.com, Hungary): plugs into the **XM satellite
   tuner harness** behind the head unit and emulates the factory XM tuner — an

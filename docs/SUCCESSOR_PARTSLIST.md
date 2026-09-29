@@ -18,19 +18,21 @@ should be copied from the v6 schematic as-is (same topology and values).
 Notes: PCB-antenna module — keep antenna keep-out at board edge, no copper
 under it. WROVER (PSRAM) only if audio buffering demands it (open decision).
 
-## 2. CAN front end (carry over — v6 "CANBUS" sheet)
+## 2. CAN front end (partly carried over — v6 "CANBUS" sheet)
 
 | Part | Package | Function | v6 reference |
 | --- | --- | --- | --- |
-| SN65HVD234DR | SOIC-8 | 3.3 V CAN transceiver, sleep mode | **U6 — copy block verbatim** |
+| TCAN3414 (or similar ISO 11898-2:2016 part with remote wake) | SOIC-8 | 3.3 V CAN transceiver, ~10 µA standby with bus wake-up | **new — replaces U6** (SN65HVD234: listening standby 200–600 µA, sleep mode deaf) |
 | SZNUP2105LT3G | SOT-23 | CAN bus ESD/transient protector | **D4** |
 | 68 k across CANH/CANL | 0805 | bus bias/keeper (I-Bus has no 120 Ω termination) | **R36** |
-| 10 k on RS pin | 0805 | slope control / sleep drive | **R25** |
+| standby-pin drive | — | STB to an ESP32 GPIO (v6's R25/RS arrangement doesn't apply to the new part) | replaces **R25** |
 | 10 µF + 0.1 µF | 0805 | transceiver decoupling | C9 + C19 |
 
-Notes: RS and EN go to ESP32 GPIOs (v6 wired them to the STM32 — keep that,
-it enables transceiver sleep). RXD additionally routes to an RTC-capable
-GPIO for deep-sleep wake (new requirement, see power management).
+Notes: the transceiver's standby pin goes to an ESP32 GPIO. RXD additionally
+routes to an RTC-capable GPIO for deep-sleep wake (the transceiver pulls RXD
+low on a bus wake-up pattern). The ESD protector and 68 k bias carry over from
+v6 unchanged; check the new transceiver's pinout — it is not an HVD234
+drop-in.
 
 ## 3. Audio DAC (new)
 
@@ -67,11 +69,11 @@ Adaptation notes (the one carry-over block that needs thought):
 
 | Part | Package | Function | v6 reference |
 | --- | --- | --- | --- |
-| AP63203WU-7 (3.3 V fixed, 2 A) | TSOT-26 | low-Iq (~22 µA) buck from 12 V | new — replaces U3 (LM1117, linear: inadequate for ESP32) |
+| LMR36015 (4.2–60 V in, 66 V transient, 1.5 A, ~24 µA Iq) or similar 60 V-class buck | — | low-Iq 3.3 V buck from 12 V | new — replaces U3 (LM1117, linear: inadequate for ESP32). **Not** AP63203 (35 V abs max) or TPS54202 (30 V): below the TVS clamp and a suppressed load dump (up to 35–42 V) |
 | 4.7–10 µH shielded inductor | SMD | buck inductor | new |
 | 22 µF ×2 out, 10 µF in (50 V) | 0805/1210 | buck caps | new |
 | SS34 or similar 3 A Schottky | SMA | reverse-polarity series diode | upgrade of D1 (1N4148W — too small for successor) |
-| SMBJ33A TVS | SMB | load-dump clamp on 12 V input | **new — v6 never had one; add it** |
+| SMBJ33A TVS | SMB | transient clamp on 12 V input (breakdown 36.7 V, clamp ≤ 53.3 V — only coherent with a ≥ 55–60 V regulator) | **new — v6 never had one; add it**. An SMB TVS cannot absorb an *unsuppressed* load dump (ISO 16750-2 Test A: 79–101 V for up to 400 ms); whether 1998–2005 SAABs suppress load dump centrally is unverified — decide on a surge stopper or document the assumption |
 | Polyfuse ~500 mA hold | 1812 | input overcurrent | new |
 | Load switch (TPS22918 or high-side P-FET) | SOT-23 | gates DAC + line driver + LEDs off in sleep | new (sleep-by-construction) |
 
@@ -101,6 +103,6 @@ USB-UART bridge — the original ESP32 has no native USB), mic/HFP block
 
 - ESP32 devkit (WROOM-based, e.g. ESP32-DevKitC) — or ESP32-A1S audio kit
 - PCM5102A breakout (purple "GY-PCM5102" boards are fine)
-- SN65HVD230 breakout (230 is the jellybean breakout cousin of the 234 —
-  fine for bench; final board uses the 234 for its sleep pin)
+- SN65HVD230 breakout (the jellybean breakout cousin of the 234 — fine for
+  the bench; the final board needs a wake-capable transceiver, see block 2)
 - Bench 12 V supply + the CDC connector pigtail / v6 test harness

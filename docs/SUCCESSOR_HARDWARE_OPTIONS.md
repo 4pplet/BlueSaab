@@ -4,7 +4,7 @@ The new device is a **spiritual successor to BlueSaab v6**: a fresh, fully
 open design that does the same job in the same cars, not an incremental v7 of
 the STM32+RN52 board. Working name TBD.
 
-**Primary purpose: production continuity.** The RN52 is EOL and unobtainable,
+**Primary purpose: production continuity.** The RN52 is end-of-life (Microchip PCN, last shipment June 2024; only broker stock remains),
 so v6 boards cannot be built anymore — the successor exists first and
 foremost so BlueSaab can keep being produced. Feature improvements
 (multi-device, sleep, OTA) are secondary and must never delay a buildable,
@@ -24,8 +24,9 @@ v6-equivalent device.
 What the successor must do (same job as v6, minus the dead parts):
 
 - **Familiar in-car interface, v6 baseline.** Existing users must not have to
-  relearn anything: the v6.1.1 button map ([USAGE_v6.md](USAGE_v6.md)) works
-  unchanged — preset 1 = pair, preset 3 = reconnect, preset 6 = disconnect,
+  relearn anything: the released v6 button map ([USAGE_v6.md](USAGE_v6.md))
+  works unchanged — preset 1 = pair, preset 3 = reconnect, presets 4/5 =
+  volume (6.1.3+), preset 6 = disconnect, >2 s middle SEEK = pair (6.1.3+),
   NXT = play/pause, track ± = next/prev, same SID text behavior. Improvements
   are allowed but must be *additive* (new behavior on currently-unused
   buttons), never a change to what an existing button does.
@@ -34,8 +35,8 @@ What the successor must do (same job as v6, minus the dead parts):
   paired phones and swap between them from the driver's seat. Sketch:
   preset 3 = reconnect last (as v6), *repeated* presses cycle through the
   paired-device list, with the SID showing the device name being connected
-  ("BT: STEFAN'S IPHONE"). Presets 2/4/5 are free if dedicated device slots
-  turn out nicer. Exact UX is an open decision below.
+  ("BT: STEFAN'S IPHONE"). Preset 2 is free if dedicated device slots turn
+  out nicer (4/5 are volume since 6.1.3). Exact UX is an open decision below.
 - **Bluetooth Classic A2DP sink + AVRCP** — this is what phones stream music
   over. Still universally supported by iPhone/Android; LE Audio is not a safe
   bet yet (see rejected options).
@@ -43,7 +44,9 @@ What the successor must do (same job as v6, minus the dead parts):
   controller can hit it exactly).
 - **Stereo line-level analog out** into the head unit (the RN52 had this built
   in; most replacements need an external DAC).
-- **12 V automotive power**, ignition-switched.
+- **12 V automotive power** — a permanent battery feed (not
+  ignition-switched), hence the sleep requirement, and transient-rated for
+  automotive surges (see Power).
 - **Open toolchain** — the whole point of the revival. NDA'd SDKs disqualify.
 
 ## Option A — ESP32 (CHOSEN)
@@ -53,7 +56,7 @@ One original-series ESP32 module replaces **both** the STM32 and the RN52.
 | Aspect | Detail |
 | --- | --- |
 | Bluetooth | BT 4.2 dual-mode; A2DP sink + AVRCP controller in free ESP-IDF (SBC codec; AAC possible via ESP-ADF) |
-| CAN | Built-in TWAI controller. 47.619 kbps verified feasible: 80 MHz / (BRP 112 × 15 TQ) = 47 619 bps exactly. Needs only a transceiver (TJA1051 or SN65HVD230) |
+| CAN | Built-in TWAI controller. 47.619 kbps exact: 80 MHz / (BRP 80 × 21 tq, TSEG1 15 / TSEG2 5) — identical to v6's proven 1 µs-tq timing (BRP 112 × 15 tq also works). Needs only a transceiver; for sleep, a wake-capable one (see Power management) |
 | Audio out | External I2S DAC — PCM5102A (~$2) gives clean line-level stereo; skip the awful internal 8-bit DAC |
 | Extras | Wi-Fi: OTA firmware updates, web-based config/debug console instead of UART |
 | Toolchain | ESP-IDF, fully open, huge community |
@@ -135,7 +138,7 @@ logic (platform-independent) onto ESP-IDF + TWAI; replace the whole
 (ESP-IDF task WDT) mandatory from day one** — always-powered device, no
 reachable reset; v6 shipped for years without one (gap found 2026-07-22,
 see V6_CODE_AUDIT.md). The in-car
-behavior must be indistinguishable from v6.1.1 (see requirement above) —
+behavior must be indistinguishable from released v6 (see requirement above) —
 [USAGE_v6.md](USAGE_v6.md) doubles as the test checklist. PCB in KiCad so the
 hardware is as open as the code.
 
@@ -146,10 +149,10 @@ Sheet-by-sheet review of `HARDWARE/BlueSaab_v6.PDF` (8 schematic sheets):
 | v6 sheet | What it is | Successor |
 | --- | --- | --- |
 | Amplifier | THS4522 differential line driver, gain ≈2 (2k/1k), 0.22 µF filtering, 100 Ω series outputs | **Reuse as-is.** The head unit's CDC audio input is *differential* (L±/R± on the connector) — the PCM5102A is single-ended, so this stage is still required. Proven part, still in production |
-| CANBUS | SN65HVD234 transceiver + NUP2105L bus ESD protector + 68 k bias resistor | **Reuse as-is** (drives from ESP32 TWAI instead of STM32 bxCAN) |
+| CANBUS | SN65HVD234 transceiver + NUP2105L bus ESD protector + 68 k bias resistor | **Reuse the protection + bias; replace the transceiver** with a wake-capable one (e.g. TCAN3414): the HVD234's listening standby draws 200–600 µA, above the whole sleep budget, and its sub-µA sleep mode is deaf |
 | Connectors | TE 827229-1 24-pin CDC connector — 12 V (pin 6), GND (12), CAN H/L (11/5), R± (7/2), L± (8/3); reverse-polarity diode; FTDI + USB power OR-ing | **Keep connector + pinout** — this is what makes the successor a drop-in install. Debug connectors can modernize |
 | Mic | Header + bias + slide switch feeding the RN52's mic inputs (hands-free option) | **Open decision.** ESP32 can do HFP but needs an I2S mic/ADC path; defer to post-v1 unless demanded |
-| Power | LM1117 3.3 V **linear** regulator straight from car 12 V | **Must be redesigned.** Fine for ~100 mA of STM32+RN52; the ESP32's ~500 mA radio bursts would dissipate >4 W linearly. Use an automotive buck (TPS54202/AP63203-class) + load-dump TVS (which v6 never had — only a series diode) |
+| Power | LM1117 3.3 V **linear** regulator straight from car 12 V | **Must be redesigned.** Fine for ~100 mA of STM32+RN52; the ESP32's ~500 mA radio bursts would dissipate >4 W linearly. Use a 60 V-class low-Iq automotive buck (e.g. LMR36015) + input TVS (which v6 never had — only a series diode). Not AP63203 (35 V abs max) or TPS54202 (30 V): both are below the TVS clamp and a suppressed load dump |
 | Microprocessor | STM32F103, 8 MHz resonator, JTAG, BOOT0/RESET buttons | Replaced by the ESP32 module |
 | RN52 | Module wiring, status LEDs (RGB driven by RN52 + heartbeat) | Replaced by ESP32; keep equivalent status LEDs |
 
@@ -174,13 +177,19 @@ sleep handling is a **hard requirement**, not an optimization:
   the chip; full boot + BT stack is ~1–2 s, well inside the time it takes the
   driver to reach the CD button. (The first wake-up frame is missed —
   irrelevant, the IHU polls node status continuously.)
-- **CAN transceiver sleep**: the SN65HVD234's RS/EN pins (already wired to the
-  MCU in v6) give it a sub-µA listen/sleep mode that still passes RXD edges.
-- **Low-quiescent buck**: pick for Iq, e.g. AP63203 (~22 µA) — a lesser buck's
-  quiescent current would dominate the whole sleep budget.
+- **CAN transceiver standby with remote wake**: the SN65HVD234 can't do
+  this — its RS-standby keeps the receiver listening but draws 200–600 µA;
+  its EN-sleep draws 0.05 µA but is deaf. Use an ISO 11898-2:2016 transceiver
+  with low-power standby and bus wake-up, e.g. TI TCAN3414 (3.3 V, ~10 µA
+  standby, drives RXD low on a wake-up pattern; its dominant-timeout is fine
+  at 47.6 kbit/s).
+- **Low-quiescent buck rated for the car**: e.g. LMR36015 (4.2–60 V, ~24 µA
+  Iq) — a lesser buck's quiescent current would dominate the sleep budget,
+  and it must survive transients (see the parts list).
 
-Sleep-state target: **< 100 µA total** from 12 V — years of parking, ~500×
-better than v6. Firmware obligation: the main loop must track bus silence and
+Sleep-state target: **< 100 µA total** from 12 V — years of parking, a
+few hundred times better than v6 (whose parked draw is unmeasured, est.
+15–30 mA). Firmware obligation: the main loop must track bus silence and
 enter deep sleep; there is no ignition signal to lean on.
 
 **Chip choice reconsidered for power (2026-07-22) — ESP32 confirmed.** Drain
@@ -193,13 +202,14 @@ sleep architecture, not the SoC.
 
 Hardware refinement instead: gate the DAC, line driver, and LEDs behind a
 high-side load switch (or the buck's EN) so sleep-state draw is fixed **by
-construction** at ESP32-deep-sleep + transceiver-sleep + buck Iq (~30–50 µA),
+construction** at ESP32-deep-sleep + transceiver-standby + buck Iq (~45–60 µA
+with a TCAN3414-class transceiver),
 immune to firmware bugs leaving a peripheral powered.
 
 Open decisions:
 
 - [ ] Project name (it's a spiritual successor, not "BlueSaab v7" — or is it?)
-- [ ] Multi-device swap UX: cycle on preset 3 vs. device slots on presets 2/4/5
+- [ ] Multi-device swap UX: cycle on preset 3 vs. a device slot on preset 2
       vs. both; SID name display; whether an idle unit auto-accepts any known
       phone (true multipoint is likely out — ESP32 handles one A2DP stream)
 - [ ] Hands-free/mic support (v6 had an optional mic header; needs ESP32 HFP

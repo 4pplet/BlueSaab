@@ -2,7 +2,10 @@
 
 This documents the CD-changer protocol on the SAAB I-Bus as actually
 implemented and field-proven by BlueSaab v6.1.1, with 9-5 specifics from
-community research. It exists because the canonical reference — Tomi
+community research. Firmware 6.1.2+ keeps the same frames and cadences and
+adds robustness only: a ≥10 ms seam guard between 0x6A2 sequences, 35 ms
+pacing between 0x337 text groups, and the SID "event" mark only on the first
+write after activation. It exists because the canonical reference — Tomi
 Liljemark's `pikkupossu.1g.fi` — is **dead**; see
 [archived copy](http://web.archive.org/web/20250122150340/http://pikkupossu.1g.fi/tomi/projects/i-bus/i-bus.html).
 
@@ -67,10 +70,15 @@ Sent periodically (≤950 ms) and on events. Layout
 ([CDCStatus.cpp](../CDCStatus.cpp) `sendCdcStatus`):
 
 - byte 0: bit7 = event (vs base-time), bit6 = due to remote command,
-  bit5 = disc-presence valid. v6 sends `(event?0x07:0) | (remote?0:0x01)) << 5`
-- byte 1: disc presence validation — `0xFF` when active
+  bit5 = disc-presence valid. 6.1.6+ sends
+  `((event?0x4:0) | (remote?0x2:0) | 0x1) << 5`. In practice event == remote,
+  so the byte is `0xE0` on command-induced resends and `0x20` on base-time
+  sends — identical on the bus to ≤6.1.5, whose expression was wrong only for
+  the two mixed cases, which never occurred
+- byte 1: disc presence validation — `0xFF` when active, `0x00` idle
 - byte 2: disc presence bitmap — `0x3F` (6 discs) when active, `0x01` idle
-- byte 3: high nibble disc mode, low nibble disc number — `0x41` active
+- byte 3: high nibble disc mode, low nibble disc number — `0x41` active,
+  `0x01` idle
 - byte 4: track number (`0xFF` = n/a)
 - bytes 5-6: track minute/second (`0xFF`)
 - byte 7: **security byte — `0xD0` = "married to car, VIN matches"**. This
@@ -83,11 +91,11 @@ Byte 0 = `0x80` marks a command/button event. Byte 1 (+byte 2 for presets)
 
 | byte1 | Meaning | v6 action |
 | --- | --- | --- |
-| 0x24 | CDC mode selected | activate, sound-request, connect BT |
+| 0x24 | CDC mode selected | activate, sound-request, connect BT; 6.1.2+ shows the version banner |
 | 0x14 | CDC mode deselected | deactivate, disconnect BT |
 | 0x59 | NXT (wheel) | play/pause |
 | 0x35 / 0x36 | Track + / − | next / previous |
-| 0x68 + byte2 0x01–0x06 | IHU presets 1–6 | 1 = discoverable, 3 = reconnect, 4/5 = gain down/up (6.1.3+), 6 = disconnect |
+| 0x68 + byte2 0x01–0x06 | IHU presets 1–6 | 1 = discoverable, 3 = reconnect, 4/5 = AVRCP volume down/up to the phone (6.1.3+), 6 = disconnect |
 | 0x45 / 0x46 | SEEK+/− long press | unassigned |
 | 0x84 | middle SEEK long press | unassigned |
 | 0x88 | middle SEEK >2 s | discoverable (6.1.3+) |
@@ -101,14 +109,18 @@ Write access must be **granted before every write**
 
 1. **Request** on 0x357 every ~1 s:
    `[0]=0x1F` (node address), `[1]=0x02` (SID object: row 2),
-   `[2]=` request type: `0x05` static text, `0x01` driver action
-   ("driver breakthrough", used right after a button press), `0xFF` =
+   `[2]=` request type: `0x05` static text, `0x01` = what v6 sends for
+   "driver breakthrough" right after a button press (Tomi's table labels
+   1 = engineering test, 3 = driver action — keep `0x01`, it is field-proven),
+   `0xFF` =
    release/don't want to write; `[3]=0x12` (function ID); rest 0.
 2. **Grant** arrives on 0x368: `data[0]==0x02 && data[1]==0x12` → we may
    write **once**.
 3. **Write** on 0x337 as a 3-frame group, 10 ms apart:
    byte0 = `0x42, 0x01, 0x00` (first-of-3 marker, then countdown),
-   byte1 = `0x96`, byte2 = `0x82` on event / `0x02` static,
+   byte1 = `0x96`, byte2 = `0x82` (event) on the first write after CDC
+   activation, `0x02` (static) afterwards (6.1.6+; earlier firmware sent
+   `0x82` on every write),
    bytes 3-7 = 5 ASCII chars each → 12 visible chars on row 2 (SID charset
    is slightly nonstandard; plain ASCII is safe).
 4. Watch 0x348: if the IHU requests driver breakthrough (`data[2]` 0x03 or
@@ -127,7 +139,8 @@ successor should make beeps optional or drop them.
 
 ## Sources
 
-- v6.1.1 source (this repo) — the executable specification
+- this repo's firmware source — the executable specification (6.1.1 is the
+  field-proven baseline)
 - [Tomi Liljemark's I-Bus protocol pages (Wayback)](http://web.archive.org/web/20250122150340/http://pikkupossu.1g.fi/tomi/projects/i-bus/i-bus.html)
 - [9-5 handshake & warning-light findings — SaabCentral (Wayback)](http://web.archive.org/web/20230323083251/https://www.saabcentral.com/threads/canbus-version-8bit-29bit-2004-9-5.286321/)
 - [SAAB_9-5_NOTES.md](SAAB_9-5_NOTES.md) — model-specific research
