@@ -28,6 +28,7 @@ class RN52 {
 	Timeout timeout;
 	Thread thread;
 	Queue<const char, 20> rtosQueue;
+	volatile int queued; // our own count of rtosQueue entries, see queueCommand()
 
 	Serial serial;
 	SerialRX serialRX;
@@ -39,6 +40,7 @@ class RN52 {
 	char version[8];
 
 	int queueCommand(const char *cmd);
+	void adjustQueued(int delta);
 	void onA2DPProfileChange(bool connected);
 	void onGPIO2();
 	void run();
@@ -50,6 +52,7 @@ public:
 
 	RN52()
 		: thread(osPriorityNormal, 512)
+		, queued(0)
 //		, serial(PA_9, PA_10, 115200) // UART1 Tx/Rx for v6.0
 		, serial(PB_10, PB_11, 115200) // UART3 Tx/Rx for v6.1
 		, serialRX(serial)

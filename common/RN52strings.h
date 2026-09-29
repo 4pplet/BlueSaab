@@ -35,12 +35,12 @@
 
 // RN52 settings commands
 #define RN52_SET_IDLE_TIMEOUT       "S^,600\r"          // Shutdown module after 10 minutes of idle time (not connected)
-#define RN52_SET_PAIRING_TIMEOUT    "STP,10\r"          // Set pairing timeout to 10 seconds; upon failure switch to next device on PDL
+#define RN52_SET_PAIRING_TIMEOUT    "STP,10\r"          // Pairing timeout, 10 s (Microchip: "sets the pairing timeout in seconds")
 #define RN52_SET_DISCOVERY_MASK     "SD,04\r"           // Enable A2DP/AVRCP profile in discovery mask
 #define RN52_SET_CONNECTION_MASK    "SK,04\r"           // Enable A2DP/AVRCP profile in connection mask
 #define RN52_SET_COD                "SC,200420\r"       // Sets "CoD" (Class of Device)
 #define RN52_SET_DEVICE_NAME        "SN,BlueSaab v6\r"  // Broadcasted and shown in audio source's settings
-#define RN52_SET_MAXVOL             "SS,0F\r"           // Sets the volume gain to MAX level 15 (default 11)
+#define RN52_SET_MAXVOL             "SS,0F\r"           // Sets the speaker gain to MAX level 15 (default 0x0A = 10)
 #define RN52_SET_EXTENDED_FEATURES  "S%,1084\r"
 /*
  Bit 0 – Enable AVRCP buttons for EK

@@ -52,11 +52,13 @@
  */
 
 #define MODULE_NAME					"BlueSaab v6"
-#define FIRMWARE_VERSION			"6.1.6"
+#define FIRMWARE_VERSION			"6.1.7"
 
 // Set to 0 to suppress the SID beep on entering CDC mode (recommended for
 // 9-5s if chasing warning-light issues - see docs/SAAB_9-5_NOTES.md)
+#ifndef CDC_ENTRY_BEEP_ENABLED
 #define CDC_ENTRY_BEEP_ENABLED		1
+#endif
 #define LAST_EVENT_IN_TIMEOUT		3000 		    // Milliseconds
 #define NODE_STATUS_TX_MSG_SIZE		4 			    // Decimal; defines how many frames do we need to reply with to '6A1'
 
@@ -76,7 +78,7 @@ class SaabCan {
 
 	void sendFunc();
 public:
-	SaabCan(): send_thread(osPriorityNormal, 256), txErrors(0), txDropped(0) {}
+	SaabCan(): send_thread(osPriorityNormal, 320), txErrors(0), txDropped(0) {}
 	unsigned getTxErrors() { return txErrors; }
 	unsigned getTxDropped() { return txDropped; }
 	// Live bxCAN error state (read-only register reads, ISR-safe)

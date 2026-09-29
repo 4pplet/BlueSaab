@@ -85,44 +85,59 @@ static char find2(const char *cp, const char *from, const char *to) {
 	return 0;
 }
 
+static inline bool is_cont(char b) { return ((unsigned char)b & 0xC0) == 0x80; }
+
+// Transliterate one code point given as a UTF-8 lead byte + one trail byte
+// (2-byte sequences only); 0 if not in the tables.
+static char lookup2(char lead, char trail) {
+	const char cp[2] = { lead, trail };
+	for (const char **p = conversion; *p; p += 2) {
+		if (lead == *p[0])
+			return find2(cp, p[0], p[1]);
+	}
+	return 0;
+}
+
 void utf_convert(const char *from, char *to, int size) {
 	char *to_last = to + size - 1;
 	while (*from && to < to_last) {
-		if ((*from & 0b11100000) == 0b11000000) { // this will be 2 bytes of UTF8 encoded data
-			if (from[1] == 0) // string ends, no second byte
-				break;
-			char c = 0;
-			const char **p = conversion;
-			while (*p) {
-				const char *convert_from = p[0];
-				if (*from == *convert_from) { // check the first byte - if this is the string to search
-					const char *convert_to = p[1];
-					c = find2(from, convert_from, convert_to);
-					break;
-				}
-				p += 2;
-			}
-			if (c) { // match found
-				*to++ = c;
-			}
-			from+=2;
-		} else if ((*from & 0b11110000) == 0b11100000) {
-			// 3-byte UTF8 sequence (e.g. curly quotes, dashes) - not in the
-			// tables; consume and drop it like unknown 2-byte sequences,
-			// instead of leaking raw bytes to the SID
-			if (from[1] == 0 || from[2] == 0)
-				break;
-			from += 3;
-		} else if ((*from & 0b11111000) == 0b11110000) {
-			// 4-byte UTF8 sequence (emoji etc.) - consume and drop
-			if (from[1] == 0 || from[2] == 0 || from[3] == 0)
-				break;
-			from += 4;
-		} else if ((*from & 0b11000000) == 0b10000000) {
-			// stray continuation byte - drop
-			from++;
-		} else {
+		unsigned char b = (unsigned char)*from;
+		int len = (b < 0x80) ? 1
+		        : ((b & 0xE0) == 0xC0) ? 2
+		        : ((b & 0xF0) == 0xE0) ? 3
+		        : ((b & 0xF8) == 0xF0) ? 4 : 0;
+		// A multi-byte sequence counts only if every trail byte is a
+		// continuation byte (10xxxxxx). NUL is not, so this also stops at a
+		// string end cut mid-sequence without reading past the terminator.
+		bool valid = len > 1;
+		for (int i = 1; valid && i < len; i++)
+			valid = is_cont(from[i]);
+		if (len == 1) {
 			*to++ = *from++;
+		} else if (valid) {
+			if (len == 2) {
+				char c = lookup2(from[0], from[1]);
+				if (c)
+					*to++ = c;
+			} // 3/4-byte (quotes, dashes, emoji): dropped
+			from += len;
+		} else {
+			// Not UTF-8: stray continuation, 0xF8-0xFF, or a lead byte whose
+			// trail is missing/ASCII. Assume Latin-1 (U+0080-U+00FF == UTF-8
+			// C2/C3 + (b & 0x3F | 0x80)) and consume exactly ONE byte, so the
+			// following ASCII is never swallowed.
+			if (len > 1 && is_cont(from[1])) {
+				// Broken/truncated UTF-8 (lead + some trail bytes): drop it
+				int n = 1;
+				while (n < len && is_cont(from[n]))
+					n++;
+				from += n;
+			} else {
+				char c = (b >= 0xC0) ? lookup2((char)0xC3, (char)(0x80 | (b & 0x3F))) : 0;
+				if (c)
+					*to++ = c;
+				from++;
+			}
 		}
 	}
 	*to = 0; // terminate the string

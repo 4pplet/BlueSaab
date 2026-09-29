@@ -128,27 +128,30 @@ void SidResource::writeGrantedText() {
 	// Snapshot the temporary-text state under a critical section: the CAN
 	// ISR (showTemporary) can otherwise interleave with the decrement or
 	// rewrite tempText mid-copy.
+	// The "event" flag is captured-and-cleared in the same section: it is set
+	// by activate() in the CAN ISR. One-shot: only the first write after
+	// activation is an "event" write (0x82), later scroll updates are static
+	// (0x02). (Before 6.1.6 it was never cleared - every write carried the
+	// event mark, a candidate cause of SID flicker.)
 	char localTemp[sizeof(tempText)];
 	bool useTemp = false;
+	bool event;
 	__disable_irq();
 	if (tempGrants > 0) {
 		tempGrants--;
 		memcpy(localTemp, tempText, sizeof(localTemp));
 		useTemp = true;
 	}
+	event = writeTextOnDisplayUpdateNeeded;
+	writeTextOnDisplayUpdateNeeded = false;
 	__enable_irq();
 
 	if (useTemp) {
-		formatTextMessage(localTemp, writeTextOnDisplayUpdateNeeded);
+		formatTextMessage(localTemp, event);
 	} else {
 		const char *buffer = scroller.get();
-		formatTextMessage(buffer[0] ? buffer : MODULE_NAME, writeTextOnDisplayUpdateNeeded);
+		formatTextMessage(buffer[0] ? buffer : MODULE_NAME, event);
 	}
-	// One-shot: only the first write after activation is an "event" write
-	// (0x82); subsequent scroll updates are static (0x02). This flag was
-	// never cleared before - every write since activation carried the event
-	// mark, a candidate cause of SID flicker.
-	writeTextOnDisplayUpdateNeeded = false;
 	textSender.send();
 	lastTextSend = us_ticker_read();
 }
@@ -181,11 +184,17 @@ void SidResource::sendDisplayRequest(bool driverBreakthrough) {
 	saabCan.sendCanFrame(NODE_DISPLAY_RESOURCE_REQ, displayRequestCmd);
 }
 
+// Called from the CAN ISR (buttons, CDC-on banner) and from the RN52 thread
+// ("CONNECTED"), so the whole swap is a critical section - otherwise the ISR
+// could rewrite tempText in the middle of the thread's copy. PRIMASK is
+// saved/restored, which is correct in both ISR and thread context.
 void SidResource::showTemporary(const char *text, int grants) {
-	tempGrants = 0; // disarm while the text is being swapped (callers may race the CAN ISR)
+	uint32_t primask = __get_PRIMASK();
+	__disable_irq();
 	strncpy(tempText, text, sizeof(tempText) - 1);
 	tempText[sizeof(tempText) - 1] = 0;
 	tempGrants = grants;
+	__set_PRIMASK(primask);
 }
 
 void SidResource::grantReceived(CANMessage& frame) {

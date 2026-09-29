@@ -29,7 +29,7 @@ class CDCStatus {
 
 public:
 	CDCStatus() :
-			cdcActive(false), thread(osPriorityNormal, 256) {}
+			cdcActive(false), thread(osPriorityNormal, 320) {}
 	void initialize();
 	void onIhuStatusFrame(CANMessage& frame);
 	void onCDCControlFrame(CANMessage& frame);

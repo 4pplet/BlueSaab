@@ -27,11 +27,12 @@ CANMessage canRxFrame;
 SaabCan saabCan;
 
 void SaabCan::initialize(int hz) {
-	if (iBus.frequency(hz) && iBus.mode(CAN::Normal)) {
-//		getLog()->log("CAN OK\r\n");
-	} else {
-//		getLog()->log("CAN NOT OK\r\n");
-	}
+	// The constructor already set the bitrate; re-applying it here is the
+	// second chance if that failed. Neither step may halt the unit.
+	if (!iBus.frequency(hz))
+		getLog()->log("CAN: bitrate setup failed\r\n");
+	if (!iBus.mode(CAN::Normal))
+		getLog()->log("CAN: normal mode setup failed\r\n");
 
 	iBus.attach(callback(this,&SaabCan::onRx), mbed::CAN::RxIrq);
 	send_thread.start(callback(this, &SaabCan::sendFunc));
@@ -58,8 +59,15 @@ extern DigitalOut aliveLed;
 
 void SaabCan::onRx() {
 	while (iBus.read(canRxFrame)) {
+		// The I-Bus carries 11-bit data frames only. Anything else could
+		// alias a handled ID (a remote frame would replay stale data[]).
+		if (canRxFrame.format != CANStandard || canRxFrame.type != CANData)
+			continue;
 		for (int i = 0; i < CAN_MAX_CALLBACKS; i++) {
-			if (callBacks[i].id == canRxFrame.id) {
+			// Unused slots have id 0 and an empty callback: calling one is
+			// an MBED_ASSERT -> permanent halt, so an ID-0 frame on the bus
+			// used to kill the unit.
+			if (callBacks[i].id == canRxFrame.id && callBacks[i].callBack) {
 				callBacks[i].callBack.call(canRxFrame);
 			}
 		}
@@ -74,8 +82,18 @@ void SaabCan::sendFunc() {
 //			getLog()->logFrame(message);
 //			unsigned tde = iBus.tderror();
 
-			if (iBus.write(*message) == 0)
-				txErrors++;
+			// All 3 TX mailboxes busy (lost arbitration under load): retry for
+			// up to ~20 ms instead of dropping at once - a lost 0x6A2 breaks
+			// the 9-5 handshake, a lost 0x337 tears SID text. Single consumer,
+			// so frame order is kept.
+			int tries = 0;
+			while (iBus.write(*message) == 0) {
+				if (++tries > 20) {
+					txErrors++; // dropped
+					break;
+				}
+				Thread::wait(1);
+			}
 //			unsigned rde = iBus.rderror();
 //			tde = iBus.tderror();
 //			getLog()->log("    rde=%d\r\n", rde);

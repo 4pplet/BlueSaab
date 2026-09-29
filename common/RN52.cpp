@@ -82,10 +82,35 @@ void RN52::initialize() {
 }
 
 
+// Commands are posted from threads and from ISRs (buttons, GPIO2, timeout).
+// RTX only counts an ISR-posted message when PendSV runs, so two posts from
+// one ISR (or from nested ISRs) can both pass RTX's own full-check and then
+// overflow the queue inside the kernel -> os_error -> permanent halt. So keep
+// our own count, updated atomically at post time, and refuse before the
+// queue's real capacity. The count only drops once a message is taken out,
+// so it is never lower than the kernel's.
+void RN52::adjustQueued(int delta) {
+	uint32_t primask = __get_PRIMASK();
+	__disable_irq();
+	queued += delta;
+	__set_PRIMASK(primask);
+}
+
 int RN52::queueCommand(const char *cmd) {
-	osStatus st = rtosQueue.put(cmd);
-	if (st != osOK) {
+	uint32_t primask = __get_PRIMASK();
+	__disable_irq();
+	bool room = queued < 18; // queue capacity is 20
+	if (room)
+		queued++;
+	__set_PRIMASK(primask);
+
+	if (!room) {
 		getLog()->log("RN52: command queue full, command dropped\r\n");
+		return -1;
+	}
+	if (rtosQueue.put(cmd) != osOK) {
+		adjustQueued(-1);
+		getLog()->log("RN52: command queue put failed, command dropped\r\n");
 		return -1;
 	}
 	return 0;
@@ -212,6 +237,8 @@ void RN52::run() {
 	for (;;) {
 		if (evt.status != osEventMessage) { // osEventMessage would mean there is a command we haven't sent yet
 			evt = rtosQueue.get();
+			if (evt.status == osEventMessage)
+				adjustQueued(-1);
 		}
 //		getLog()->log("Entering cmd mode\r\n");
 		serialRX.clearRXMail();
@@ -231,6 +258,8 @@ void RN52::run() {
 						processCommand(cmd);
 					}
 					evt = rtosQueue.get(500);
+					if (evt.status == osEventMessage)
+						adjustQueued(-1);
 					if (evt.status == osEventTimeout) {
 						// No more commands in the queue for 500ms, let's leave the command mode.
 						break;

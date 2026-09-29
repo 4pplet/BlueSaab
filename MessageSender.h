@@ -33,7 +33,7 @@ class MessageSender {
 public:
 	MessageSender(int32_t signal, int frameId, unsigned char frames[][8], int frameCount, uint32_t interval)
 		:signal(signal), frameId(frameId), frames(frames), frameCount(frameCount), interval(interval),
-		 thread(osPriorityNormal, 256)
+		 thread(osPriorityNormal, 320)
 	{
 		thread.start(callback(this, &MessageSender::run));
 		#if STACK_MONITOR_ENABLED

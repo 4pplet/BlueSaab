@@ -25,7 +25,9 @@
 // Set to 1 to print every registered thread's stack size and high-water mark
 // once per second on the debug console. Debug builds only - use to verify
 // stack margins whenever threads or their workloads change.
+#ifndef STACK_MONITOR_ENABLED
 #define STACK_MONITOR_ENABLED 0
+#endif
 
 enum LogEntryType {
 	leCANMessage = 0,

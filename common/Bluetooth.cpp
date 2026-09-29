@@ -146,9 +146,9 @@ void Bluetooth::handleDebugChar(char c) {
 				"A - Invoke voice assistant\r\n"
 				"B - Reboot the RN52 module\r\n"
 				"H - Show this list of commands\r\n"
-				"d - Get RN52 details\r\n"
-				"u - Reset PDL (Paired Devices List)\r\n"
-				"E - Show CAN TX error/drop counters\r\n");
+				"d - Show RN52 Bluetooth address (link check)\r\n"
+				"u - Reset PDL - forgets ALL paired phones\r\n"
+				"E - CAN health: TX fail/drop, RX overruns, REC/TEC, ESR\r\n");
 			break;
 		default:
 			break;

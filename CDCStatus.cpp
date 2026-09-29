@@ -93,7 +93,7 @@ class NodeStatusSender {
 	}
 
 public:
-	NodeStatusSender(): thread(osPriorityNormal, 256), lastFrameSent(0), sentAnything(false) {
+	NodeStatusSender(): thread(osPriorityNormal, 320), lastFrameSent(0), sentAnything(false) {
 		thread.start(callback(this, &NodeStatusSender::run));
 		#if STACK_MONITOR_ENABLED
 			getLog()->registerThread("NodeStatusSender::run", &thread);
@@ -124,10 +124,13 @@ void CDCStatus::onCDCControlFrame(CANMessage& frame) {
 			#if SID_TEXT_CONTROL_ENABLED
 				{
 					// Show firmware + RN52 versions for a few seconds, e.g.
-					// "6.1.4 R1.16". Built by hand - this runs in the CAN RX
+					// "6.1.7 R1.16". Built by hand - this runs in the CAN RX
 					// interrupt, where printf-family calls are not safe.
 					char verText[13];
-					strcpy(verText, FIRMWARE_VERSION " R"); // 7 chars + NUL
+					// compile-time check: prefix + NUL must leave room in verText
+					typedef char verTextFits[(sizeof(FIRMWARE_VERSION " R") < sizeof(verText)) ? 1 : -1];
+					(void)sizeof(verTextFits);
+					strcpy(verText, FIRMWARE_VERSION " R");
 					strncat(verText, bluetooth.getRN52Version(),
 							sizeof(verText) - sizeof(FIRMWARE_VERSION " R"));
 					sidResource.showTemporary(verText, 4);

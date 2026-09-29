@@ -85,20 +85,23 @@ void can_init_freq (can_t *obj, PinName rd, PinName td, int hz)
     // mailbox index, which can reorder our same-ID frame groups (3x 0x337
     // SID text, 4x 0x6A2 node status) under bus load.
     CanHandle.Init.TXFP = ENABLE;
-    CanHandle.Init.Mode = CAN_MODE_NORMAL;
+    // SILENT: HAL_CAN_Init leaves init mode at the placeholder timing below
+    // (1.2 Mbit/s) until can_frequency() writes the real BTR. Silent mode
+    // keeps the node from putting error flags on the live bus in that
+    // window; writing the real BTR clears SILM and enables normal mode.
+    CanHandle.Init.Mode = CAN_MODE_SILENT;
     CanHandle.Init.SJW = CAN_SJW_1TQ;
     CanHandle.Init.BS1 = CAN_BS1_6TQ;
     CanHandle.Init.BS2 = CAN_BS2_8TQ;
     CanHandle.Init.Prescaler = 2;
 
-    if (HAL_CAN_Init(&CanHandle) != HAL_OK) {
-        error("Cannot initialize CAN");
-    }
+    // No error() here: it halts forever and there is no watchdog. A failure
+    // (e.g. a bus stuck dominant at boot) leaves the controller unconfigured;
+    // SaabCan::initialize() re-applies bitrate + mode and logs the result.
+    (void)HAL_CAN_Init(&CanHandle);
 
     // Set initial CAN frequency to specified frequency
-    if (can_frequency(obj, hz) != 1) {
-        error("Can frequency could not be set\n");
-    }
+    (void)can_frequency(obj, hz);
 
     uint32_t filter_number = (obj->can == CAN_1) ? 0 : 14;
     can_filter(obj, 0, 0, CANStandard, filter_number);
@@ -210,12 +213,17 @@ int can_frequency(can_t *obj, int f)
     uint32_t tickstart = 0;
     int status = 1;
 
+    // Entering init mode waits for the frame in flight to finish, and leaving
+    // it waits for 11 recessive bits - each up to one frame time, ~2.8 ms at
+    // the I-Bus's 47.6 kbit/s. The original 2 ms timeout was shorter than
+    // that, and ended in error() = a permanent halt (there is no watchdog).
+    // 20 ms is ample, and a timeout now returns failure instead of halting.
     if (btr > 0) {
         can->MCR |= CAN_MCR_INRQ ;
         /* Get tick */
         tickstart = HAL_GetTick();
         while ((can->MSR & CAN_MSR_INAK) != CAN_MSR_INAK) {
-            if ((HAL_GetTick() - tickstart) > 2) {
+            if ((HAL_GetTick() - tickstart) > 20) {
                 status = 0;
                 break;
             }
@@ -226,16 +234,15 @@ int can_frequency(can_t *obj, int f)
             /* Get tick */
             tickstart = HAL_GetTick();
             while ((can->MSR & CAN_MSR_INAK) == CAN_MSR_INAK) {
-                if ((HAL_GetTick() - tickstart) > 2) {
+                if ((HAL_GetTick() - tickstart) > 20) {
                     status = 0;
                     break;
                 }
             }
-            if (status == 0) {
-                error("can ESR  0x%04x.%04x + timeout status %d", (can->ESR & 0xFFFF0000) >> 16, (can->ESR & 0xFFFF), status);
-            }
         } else {
-            error("can init request timeout\n");
+            // Withdraw the request, or the controller drops into init mode
+            // (off the bus) whenever the current frame ends and stays there.
+            can->MCR &= ~(uint32_t)CAN_MCR_INRQ;
         }
     } else {
         status = 0;

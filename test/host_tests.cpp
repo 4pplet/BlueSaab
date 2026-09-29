@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Host unit tests for the platform-independent firmware logic.
  *
  * Test bodies are the previously dormant blocks from Scroller.cpp and
@@ -5,9 +6,11 @@
  * Built and run by CI on every push (both char signednesses; the target
  * uses -funsigned-char).
  *
- * Build: g++ -funsigned-char -I test/stubs -I . \
- *            test/host_tests.cpp Scroller.cpp utf_convert.cpp -o host_tests
+ * Build (as CI does): g++ -std=gnu++98 -funsigned-char -Wall -Wextra -Werror \
+ *   -fsanitize=address,undefined -I test/stubs -I . \
+ *   test/host_tests.cpp Scroller.cpp utf_convert.cpp -o BUILD/host_tests
  */
+#undef NDEBUG /* the tests are asserts - never let them compile out */
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -175,6 +178,27 @@ static void test_convert() {
 	assert(strcmp(buf, "zz") == 0);
 	utf_convert("zz\xf0\x9f\x8e", buf, sizeof(buf));
 	assert(strcmp(buf, "zz") == 0);
+
+	// --- new in 6.1.7: invalid UTF-8 (e.g. Latin-1 metadata) consumes ONE
+	// byte, never the ASCII after it; Latin-1 letters map via the tables ---
+	utf_convert("Beyonc\xE9 Live", buf, sizeof(buf));
+	assert(strcmp(buf, "Beyonce Live") == 0);
+	utf_convert("H\xE4r kommer", buf, sizeof(buf));
+	assert(strcmp(buf, "Har kommer") == 0);
+	utf_convert("H\xE5kan Hellstr\xF6m", buf, sizeof(buf));
+	assert(strcmp(buf, "Hakan Hellstrom") == 0);
+	utf_convert("M\xF8tley Cr\xFC" "e", buf, sizeof(buf));
+	assert(strcmp(buf, "Motley Crue") == 0);
+	utf_convert("\xC4rlig", buf, sizeof(buf));
+	assert(strcmp(buf, "Arlig") == 0);
+
+	// a lead byte followed by plain ASCII is not a sequence
+	utf_convert("a\xC3" "b", buf, sizeof(buf));
+	assert(strcmp(buf, "aAb") == 0);
+
+	// the same Swedish words in proper UTF-8 still work
+	utf_convert("H\xC3\xA5kan Hellstr\xC3\xB6m", buf, sizeof(buf));
+	assert(strcmp(buf, "Hakan Hellstrom") == 0);
 }
 
 int main() {

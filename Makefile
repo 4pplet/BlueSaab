@@ -308,6 +308,11 @@ CXX_FLAGS += -DTARGET_STM32F103RB
 CXX_FLAGS += -include
 CXX_FLAGS += mbed_config.h
 
+# Extra flags from the command line, e.g.
+#   make EXTRA_FLAGS="-Werror -DSID_TEXT_CONTROL_ENABLED=0"
+C_FLAGS   += $(EXTRA_FLAGS)
+CXX_FLAGS += $(EXTRA_FLAGS)
+
 ASM_FLAGS += -x
 ASM_FLAGS += assembler-with-cpp
 ASM_FLAGS += -D__CMSIS_RTOS

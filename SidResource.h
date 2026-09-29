@@ -17,7 +17,9 @@
 
 #ifndef SAAB_CDC_SIDRESOURCE_H_
 #define SAAB_CDC_SIDRESOURCE_H_
+#ifndef SID_TEXT_CONTROL_ENABLED
 #define SID_TEXT_CONTROL_ENABLED			1
+#endif
 
 #include <rtos.h>
 #include "MessageSender.h"
@@ -35,7 +37,7 @@ class SidResource {
 	volatile int tempGrants;
 	uint32_t lastTextSend;
 
-	bool writeTextOnDisplayUpdateNeeded;
+	volatile bool writeTextOnDisplayUpdateNeeded; // set in the CAN ISR (activate)
 
 	Thread thread;
 
