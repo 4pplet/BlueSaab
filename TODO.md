@@ -8,7 +8,12 @@ RN52 is end-of-life, so v6 can no longer be built).
 
 6.1.7 is the release candidate: the 6.1.2–6.1.6 work plus the 2026-09-29 deep
 audit fixes (see CHANGELOG.md). **Nothing since 6.1.1 has touched hardware
-yet.** v6 firmware is validated on the bench and then in the car (decided
+yet.**
+
+**Release candidate:** commit `558b571`, CI run 36602440650, artifact
+`BlueSaab-6.1.7-558b571` (expires 2026-12-28 — CI is reproducible, so a
+re-run of that commit rebuilds the identical file). `BlueSaab.bin` SHA-256
+`0e6e5cb9bedc972cf3f8f4a5a57cd18fdad7c7c89fd8f172174088f5e33a8483`. v6 firmware is validated on the bench and then in the car (decided
 2026-07-22); the `E` command's counters give the quantified bus-health
 verdict.
 
