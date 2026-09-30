@@ -8,3 +8,4 @@
 /.settings/
 
 /bench/
+__pycache__/
