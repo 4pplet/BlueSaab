@@ -76,8 +76,12 @@ Every push runs `.github/workflows/build.yml`:
   uploaded as artifact `BlueSaab-<version>-<sha7>` with a `SHA256SUMS` file
   (hashes also shown on the run's summary page). Artifacts expire after 90
   days — the release is the permanent copy.
-- **host-tests** — Scroller + utf_convert asserts (gnu++98, `-Werror`,
-  ASan/UBSan, both char signednesses).
+- **host-tests** — `test/host_tests.cpp` (gnu++98, `-Werror`, ASan/UBSan,
+  both char signednesses): Scroller and utf_convert, plus the protocol
+  logic — button decode and the button→action map (the interface
+  contract), the 0x6A2 reply tables and poll dispatch, the 0x3C8 status
+  frame, SID text framing, and the RN52 V/Q response parsers — byte-exact
+  against docs/IBUS_PROTOCOL.md.
 - **lint** — `tools/lint.sh`: cppcheck + the Clang static analyzer on the
   firmware (`tools/static-analysis.sh` compiles it exactly like the real
   build: ARM target, the Makefile's includes/defines, the ARM toolchain's

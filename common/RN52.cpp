@@ -19,19 +19,12 @@
 
 #include "RN52.h"
 #include "RN52strings.h"
+#include "RN52Parse.h"
 #include <ctype.h>
 
 #include "SerialLog.h"
 #include "Scroller.h"
 #include "SidResource.h"
-
-static int getVal(char c) {
-	if (c >= '0' && c <= '9')
-		return (c - '0');
-	if (c >= 'a' && c <= 'f')
-		return (c - 'a' + 10);
-	return (c - 'A' + 10);
-}
 
 void RN52::onGPIO2() {
 	queueCommand(RN52_CMD_QUERY);
@@ -193,20 +186,10 @@ void RN52::processCommand(const char *cmd) {
 			if (!gotBuf)
 				break;
 			lines++;
-			// Response contains something like "Ver 1.16" - find the first
-			// digit.digit pattern and keep it (e.g. "1.16")
-			if (version[0] == '?') {
-				for (const char *p = gotBuf->buf; *p; p++) {
-					if (isdigit(p[0]) && p[1] == '.' && isdigit(p[2])) {
-						unsigned i = 0;
-						while (i < sizeof(version) - 1 && (isdigit(*p) || *p == '.')) {
-							version[i++] = *p++;
-						}
-						version[i] = 0;
-						getLog()->log("RN52 version: %s\r\n", (int) version);
-						break;
-					}
-				}
+			// Response contains something like "Ver 1.16" - keep the first
+			// digit.digit token (e.g. "1.16")
+			if (version[0] == '?' && rn52::parseVersion(gotBuf->buf, version, sizeof(version))) {
+				getLog()->log("RN52 version: %s\r\n", (int) version);
 			}
 			serialRX.free(gotBuf);
 		}
@@ -214,7 +197,7 @@ void RN52::processCommand(const char *cmd) {
 		RXEntry* gotBuf = serialRX.waitForRXLine(500);
 		if (gotBuf) {
 			//getLog()->logShortString(gotBuf->buf);
-			if (strlen((char *) gotBuf->buf) != 6 || !parseQResponse((char *) gotBuf->buf)) {
+			if (!parseQResponse(gotBuf->buf)) {
 				// If the response is not in the format we expected, then ask again.
 				queueCommand(RN52_CMD_QUERY);
 			}
@@ -277,19 +260,13 @@ void RN52::run() {
 	}
 }
 
-bool RN52::parseQResponse(const char data[4]) {
-	for (int i = 0; i < 4; i++) {
-		if (!isxdigit(data[i]))
-			return false;
-	}
-
-	int profile = (getVal(data[0]) << 4 | getVal(data[1])) & 0x0f;
-	//int state = (getVal(data[2]) << 4 | getVal(data[3])) & 0x0f;
+bool RN52::parseQResponse(const char *line) {
+	bool connected, trackChanged;
+	if (!rn52::decodeQResponse(line, &connected, &trackChanged))
+		return false;
 
 	bool lastA2dpConnected = a2dpConnected;
-	a2dpConnected = profile & 0x04;
-
-	bool trackChanged = getVal(data[0]) & 0x02;
+	a2dpConnected = connected;
 
 	if (lastA2dpConnected != a2dpConnected) onA2DPProfileChange(a2dpConnected);
 	if (trackChanged) getTrackData();

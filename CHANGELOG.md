@@ -53,6 +53,11 @@ current pin is in `tools/rc.env`.
 - More stack headroom for four 256-byte threads (now 320).
 - Debug help text: `d` shows the RN52 Bluetooth address, `E` lists all CAN
   health counters, `u` warns that it forgets all phones.
+- Protocol logic (button decode + action map, CDC commands, 0x6A2 reply
+  selection and tables, 0x3C8 builder, SID text framing, RN52 V/Q parsing)
+  extracted into pure modules (`IbusProtocol`, `RN52Parse`) and unit-tested
+  byte-exact; behavior unchanged (proven equivalent to the previous code on
+  2.46 M inputs). The 0x6A2 tables moved from RAM to flash (−96 B RAM).
 - Build: `make EXTRA_FLAGS=...` hook; CI builds four variants with
   `-Werror`, runs host tests with sanitizers, names artifacts
   `BlueSaab-<version>-<sha7>` with SHA-256 sums; tag-triggered draft

@@ -28,11 +28,15 @@ history is a useful I-Bus protocol reference.
 
 - `main.cpp` — boots RTOS threads; initializes CAN-side subsystems first, then
   Bluetooth (which blocks ~5 s while the RN52 reboots)
+- `IbusProtocol.*` — the I-Bus protocol logic as pure, host-tested functions:
+  button decode + button→action map (the interface contract), CDC-command
+  decode, 0x6A1→0x6A2 reply selection and the frozen reply tables, 0x3C8
+  builder, SID text framing. No mbed dependencies — keep it that way.
 - `SaabCan.*` — I-Bus CAN node @ 47.619 kbps: RX dispatch (ISR), TX thread,
   health counters; CDC frame IDs in `SaabCan.h`
 - `CDCStatus.*` — emulated CD changer: CDC mode on/off, 0x3C8 status, and
   `NodeStatusSender` (the single sender of all 0x6A2 node-status replies)
-- `Buttons.*` — decodes head unit / steering wheel buttons from frame `0x3C0`.
+- `Buttons.*` — wires `ibus::decodeButton`/`buttonAction` (frame `0x3C0`) to Bluetooth.
   Preset 1 = discoverable, 3 = reconnect, 4/5 = volume down/up (AVRCP to the
   phone, 6.1.3+), 6 = disconnect; extra-long middle SEEK (0x88, >2 s) =
   discoverable (6.1.3+). Long SEEK± (0x45/0x46), long middle SEEK (0x84),
@@ -42,9 +46,13 @@ history is a useful I-Bus protocol reference.
   PAIRING/CONNECTED notices, scrolling metadata. On by default
   (`SID_TEXT_CONTROL_ENABLED 1` in `SidResource.h`); 0 disables the SID calls.
 - `common/` — RN52 driver: `Bluetooth` (high-level API + debug console),
-  `RN52` (serial command protocol), `SerialLog`/`SerialRX`, and `can_api.c`
-  (our override of the mbed bxCAN driver)
-- `test/` — host unit tests (Scroller, utf_convert), run by CI
+  `RN52` (serial command protocol), `RN52Parse` (pure, host-tested V/Q
+  response parsers), `SerialLog`/`SerialRX`, and `can_api.c` (our override
+  of the mbed bxCAN driver)
+- `test/` — host unit tests (Scroller, utf_convert, IbusProtocol, RN52Parse),
+  run by CI with sanitizers. The protocol tests pin the field-proven frames
+  and button map byte-exact: a failing test means a behavior change — make it
+  deliberate and update docs/IBUS_PROTOCOL.md / USAGE_v6.md with it.
 - `tools/` — `rc.env` pins the release candidate under validation;
   `bench.sh` (fetch+verify, backup, flash, logging console, summary) and
   `bench_console.py`, which write to the gitignored `bench/`; `lint.sh` runs

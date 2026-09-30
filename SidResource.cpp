@@ -16,6 +16,7 @@
  */
 
 #include "SidResource.h"
+#include "IbusProtocol.h"
 #include "MessageSender.h"
 #include "Scroller.h"
 #include "SaabCan.h"
@@ -220,21 +221,5 @@ void SidResource::ihuRequestReceived(CANMessage& frame) {
  */
 
 void SidResource::formatTextMessage(const char textIn[], bool event) {
-	// Copy the provided string and make sure we have a new array of the correct length
-	unsigned char textToSid[15];
-	int n = strnlen(textIn, 12); // 12 is the number of characters SID can display on each row; anything beyond 12 is going to be zeroed out
-	for (int i = 0; i < n; i++) {
-		textToSid[i] = textIn[i];
-	}
-	for (int i = n; i < 15; i++) {
-		textToSid[i] = 0;
-	}
-
-	unsigned char eventByte = event ? 0x82 : 0x02;
-	sidMessageGroup[0][2] = eventByte;
-	sidMessageGroup[1][2] = eventByte;
-	sidMessageGroup[2][2] = eventByte;
-	memcpy(&sidMessageGroup[0][3], textToSid, 5);
-	memcpy(&sidMessageGroup[1][3], textToSid + 5, 5);
-	memcpy(&sidMessageGroup[2][3], textToSid + 10, 5);
+	ibus::formatSidText(sidMessageGroup, textIn, event);
 }

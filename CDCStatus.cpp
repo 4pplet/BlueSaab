@@ -17,30 +17,15 @@
 
 #include <string.h>
 #include "CDCStatus.h"
+#include "IbusProtocol.h"
 #include "SaabCan.h"
 #include "Bluetooth.h"
 #include "SidResource.h"
 
 CDCStatus cdcStatus;
 
-unsigned char cdcPoweronCmd[NODE_STATUS_TX_MSG_SIZE][8] = {
-		{ 0x32, 0x00, 0x00, 0x03, 0x01, 0x02, 0x00, 0x00 },
-		{ 0x42, 0x00, 0x00, 0x22, 0x00, 0x00, 0x00, 0x00 },
-		{ 0x52, 0x00, 0x00, 0x22, 0x00, 0x00, 0x00, 0x00 },
-		{ 0x62, 0x00, 0x00, 0x22, 0x00, 0x00, 0x00, 0x00 }
-};
-unsigned char cdcActiveCmd[NODE_STATUS_TX_MSG_SIZE][8] = {
-		{ 0x32, 0x00, 0x00, 0x16, 0x01, 0x02, 0x00, 0x00 },
-		{ 0x42, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00, 0x00 },
-		{ 0x52, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00, 0x00 },
-		{ 0x62, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00, 0x00 }
-};
-unsigned char cdcPowerdownCmd[NODE_STATUS_TX_MSG_SIZE][8] = {
-		{ 0x32, 0x00, 0x00, 0x19, 0x01, 0x00, 0x00, 0x00 },
-		{ 0x42, 0x00, 0x00, 0x38, 0x01, 0x00, 0x00, 0x00 },
-		{ 0x52, 0x00, 0x00, 0x38, 0x01, 0x00, 0x00, 0x00 },
-		{ 0x62, 0x00, 0x00, 0x38, 0x01, 0x00, 0x00, 0x00 }
-};
+// The 0x6A2 node-status reply sequences live in IbusProtocol (frozen,
+// host-tested against docs/IBUS_PROTOCOL.md).
 
 unsigned char soundCmd[] = {0x80,0x04,0x00,0x00,0x00,0x00,0x00,0x00};
 
@@ -65,7 +50,7 @@ class NodeStatusSender {
 			if (since_ms < 10)
 				Thread::wait(10 - since_ms);
 		}
-		for (int i = 0; i < NODE_STATUS_TX_MSG_SIZE; i++) {
+		for (int i = 0; i < ibus::NODE_STATUS_FRAMES; i++) {
 			if (i > 0)
 				Thread::wait(NODE_STATUS_TX_INTERVAL);
 			saabCan.sendCanFrame(NODE_STATUS_TX_CDC, frames[i]);
@@ -84,11 +69,11 @@ class NodeStatusSender {
 			// requested sequence rather than dropping the lower-priority ones
 			// (the 9-5 IHU requires each poll to be answered).
 			if (sig & 0x8)
-				sendSequence(cdcPowerdownCmd);
+				sendSequence(ibus::nodeStatusFrames(ibus::NODE_REPLY_POWER_DOWN));
 			if (sig & 0x1)
-				sendSequence(cdcActiveCmd);
+				sendSequence(ibus::nodeStatusFrames(ibus::NODE_REPLY_ACTIVE));
 			if (sig & 0x4)
-				sendSequence(cdcPoweronCmd);
+				sendSequence(ibus::nodeStatusFrames(ibus::NODE_REPLY_POWER_ON));
 		}
 	}
 
@@ -117,9 +102,8 @@ void CDCStatus::initialize() {
 }
 
 void CDCStatus::onCDCControlFrame(CANMessage& frame) {
-	if (frame.data[0] == 0x80) {
-		switch (frame.data[1]) {
-		case 0x24:
+	switch (ibus::decodeCdcCommand(frame.data)) {
+		case ibus::CDC_CMD_ON:
 			cdcActive = true;
 			#if SID_TEXT_CONTROL_ENABLED
 				{
@@ -144,7 +128,7 @@ void CDCStatus::onCDCControlFrame(CANMessage& frame) {
 			bluetooth.connectable();
 			bluetooth.reconnect();
 			break;
-		case 0x14:
+		case ibus::CDC_CMD_OFF:
 			#if SID_TEXT_CONTROL_ENABLED
 				sidResource.deactivate();
 			#endif
@@ -152,26 +136,25 @@ void CDCStatus::onCDCControlFrame(CANMessage& frame) {
 			thread.signal_set(0x2);
 			bluetooth.disconnect();
 			break;
-		}
+		case ibus::CDC_CMD_NONE:
+			break;
 	}
 }
 
 void CDCStatus::onIhuStatusFrame(CANMessage& frame) {
 
-	/*
-	 Here be dragons... This part of the code is responsible for causing lots of headache
-	 We look at the bottom half of 3rd byte of '6A1' frame to determine what the "reply" should be
-	 */
-
-	switch (frame.data[3] & 0x0F) {
-	case (0x3):
+	// "Here be dragons": the poll's byte 3 selects the reply (IbusProtocol).
+	switch (ibus::nodeReplyFor(frame.data)) {
+	case ibus::NODE_REPLY_POWER_ON:
 		nodeStatusSender.send(0x4);
 		break;
-	case (0x2):
+	case ibus::NODE_REPLY_ACTIVE:
 		nodeStatusSender.send(0x1);
 		break;
-	case (0x8):
+	case ibus::NODE_REPLY_POWER_DOWN:
 		nodeStatusSender.send(0x8);
+		break;
+	case ibus::NODE_REPLY_NONE:
 		break;
 	}
 }
@@ -196,35 +179,8 @@ void CDCStatus::run() {
 }
 
 void CDCStatus::sendCdcStatus(bool event, bool remote, bool cdcActive) {
-
-	/* Format of GENERAL_STATUS_CDC frame:
-	 ID: CDC node ID
-	 [0]:
-	 byte 0, bit 7: FCI NEW DATA: 0 - sent on base time, 1 - sent on event
-	 byte 0, bit 6: FCI REMOTE CMD: 0 - status change due to internal operation, 1 - status change due to CDC_COMMAND frame
-	 byte 0, bit 5: FCI DISC PRESENCE VALID: 0 - disc presence signal is not valid, 1 - disc presence signal is valid
-	 [1]: Disc presence validation (boolean)
-	 byte 1-2, bits 0-15: DISC PRESENCE: (bitmap) 0 - disc absent, 1 - disc present. Bit 0 is disc 1, bit 1 is disc 2, etc.
-	 [2]: Disc presence (bitmap)
-	 byte 1-2, bits 0-15: DISC PRESENCE: (bitmap) 0 - disc absent, 1 - disc present. Bit 0 is disc 1, bit 1 is disc 2, etc.
-	 [3]: Disc number currently playing
-	 byte 3, bits 7-4: DISC MODE
-	 byte 3, bits 3-0: DISC NUMBER
-	 [4]: Track number currently playing
-	 [5]: Minute of the current track
-	 [6]: Second of the current track
-	 [7]: CD changer status; D0 = Married to the car
-	 */
-
-	unsigned char cdcGeneralStatusCmd[8] = { 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xD0 };
-	// bit7 = event (vs base time), bit6 = due to remote CDC_COMMAND,
-	// bit5 = disc-presence valid (always). The previous expression got two
-	// of the four event/remote combinations wrong; it never misfired only
-	// because run() always passes event==remote.
-	cdcGeneralStatusCmd[0] = ((event ? 0x4 : 0x0) | (remote ? 0x2 : 0x0) | 0x1) << 5;
-	cdcGeneralStatusCmd[1] = (cdcActive ? 0xFF : 0x00); // Validation for presence of six discs in the magazine
-	cdcGeneralStatusCmd[2] = (cdcActive ? 0x3F : 0x01); // There are six discs in the magazine
-	cdcGeneralStatusCmd[3] = (cdcActive ? 0x41 : 0x01); // ToDo: check 0x01 | (discMode << 4) | 0x01
-
+	// Frame layout documented in IbusProtocol.cpp / docs/IBUS_PROTOCOL.md
+	unsigned char cdcGeneralStatusCmd[8];
+	ibus::buildCdcStatus(cdcGeneralStatusCmd, event, remote, cdcActive);
 	saabCan.sendCanFrame(GENERAL_STATUS_CDC, cdcGeneralStatusCmd);
 }

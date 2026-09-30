@@ -87,7 +87,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Scroller + utf_convert unit tests on the host: target C++ dialect,
+      # Host unit tests (Scroller, utf_convert, I-Bus protocol, RN52 parsing):
+      # target C++ dialect,
       # warnings as errors, ASan/UBSan, both char signednesses (the target
       # builds with -funsigned-char).
       - name: Build and run host tests
@@ -96,7 +97,8 @@ jobs:
           for s in unsigned signed; do
             g++ -std=gnu++98 -f$s-char -Wall -Wextra -Werror -g \
                 -fsanitize=address,undefined \
-                -I test/stubs -I . test/host_tests.cpp Scroller.cpp utf_convert.cpp \
+                -I test/stubs -I . -I common test/host_tests.cpp Scroller.cpp \
+                utf_convert.cpp IbusProtocol.cpp common/RN52Parse.cpp \
                 -o BUILD/host_tests_$s
             BUILD/host_tests_$s
           done

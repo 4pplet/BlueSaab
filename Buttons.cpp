@@ -16,6 +16,7 @@
  */
 
 #include "Buttons.h"
+#include "IbusProtocol.h"
 #include "Bluetooth.h"
 #include "SidResource.h"
 
@@ -28,53 +29,9 @@ void Buttons::initialize() {
 	saabCan.attach(CDC_CONTROL, callback(this, &Buttons::onFrame));
 }
 
-Buttons::Button decode(unsigned char data1, unsigned char data2) {
-	switch (data1) {
-	case 0x59: // NXT
-		return Buttons::NXT;
-	case 0x45: // SEEK+ button long press on IHU
-		return Buttons::SEEK_PLUS_LONG;
-	case 0x46: // SEEK- button long press on IHU
-		return Buttons::SEEK_MINUS_LONG;
-	case 0x84: // SEEK button (middle) long press on IHU
-		return Buttons::SEEK_MIDDLE_LONG;
-	case 0x88: // > 2 second long press of SEEK button (middle) on IHU
-		return Buttons::SEEK_MIDDLE_EXTRA_LONG;
-	case 0x76: // Random ON/OFF (Long press of CD/RDM button)
-		return Buttons::RANDOM;
-	case 0xB1: // Pause ON
-		return Buttons::PAUSE_ON;
-	case 0xB0: // Pause OFF
-		return Buttons::PAUSE_OFF;
-	case 0x35: // Track +
-		return Buttons::TRACK_PLUS;
-	case 0x36: // Track -
-		return Buttons::TRACK_MINUS;
-	case 0x68: // IHU buttons "1-6"
-		switch (data2) {
-		case 0x01:
-			return Buttons::IHU1;
-		case 0x02:
-			return Buttons::IHU2;
-		case 0x03:
-			return Buttons::IHU3;
-		case 0x04:
-			return Buttons::IHU4;
-		case 0x05:
-			return Buttons::IHU5;
-		case 0x06:
-			return Buttons::IHU6;
-		}
-	}
-	return Buttons::NONE;
-}
-
 void Buttons::onFrame(CANMessage& frame) {
-	if (frame.data[0] != 0x80)
-		return;
-
-	Buttons::Button button = decode(frame.data[1], frame.data[2]);
-	if (button != Buttons::NONE) {
+	ibus::Button button = ibus::decodeButton(frame.data);
+	if (button != ibus::NONE) {
 #if SID_TEXT_CONTROL_ENABLED
 		// Driver breakthrough only for actual (recognized) button presses -
 		// not for every 0x80-flagged frame (mode changes, pause, unmapped
@@ -82,36 +39,35 @@ void Buttons::onFrame(CANMessage& frame) {
 		sidResource.requestDriverBreakthrough();
 #endif
 //		getLog()->log("Buttons::onFrame button %d", button);
-		switch (button) {
-		case Buttons::NXT:
+		switch (ibus::buttonAction(button)) {
+		case ibus::ACT_PLAY_PAUSE:
 			bluetooth.play();
 			break;
-		case Buttons::TRACK_PLUS:
+		case ibus::ACT_NEXT:
 			bluetooth.next();
 			break;
-		case Buttons::TRACK_MINUS:
+		case ibus::ACT_PREV:
 			bluetooth.prev();
 			break;
-		case Buttons::IHU1:
-		case Buttons::SEEK_MIDDLE_EXTRA_LONG: // wheel-only pairing, pre-v6 muscle memory
+		case ibus::ACT_PAIR:
 			bluetooth.discoverable();
 			#if SID_TEXT_CONTROL_ENABLED
 				sidResource.showTemporary("PAIRING", 10); // ~10 s, like STP,10 (actual discoverable window undocumented)
 			#endif
 			break;
-		case Buttons::IHU3:
+		case ibus::ACT_RECONNECT:
 			bluetooth.reconnect();
 			break;
-		case Buttons::IHU4:
+		case ibus::ACT_VOLUME_DOWN:
 			bluetooth.volumeDown();
 			break;
-		case Buttons::IHU5:
+		case ibus::ACT_VOLUME_UP:
 			bluetooth.volumeUp();
 			break;
-		case Buttons::IHU6:
+		case ibus::ACT_DISCONNECT:
 			bluetooth.disconnect();
 			break;
-		default:
+		case ibus::ACT_NONE:
 			break;
 		}
 	} else {

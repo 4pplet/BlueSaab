@@ -10,7 +10,10 @@ Liljemark's `pikkupossu.1g.fi` — is **dead**; see
 [archived copy](http://web.archive.org/web/20250122150340/http://pikkupossu.1g.fi/tomi/projects/i-bus/i-bus.html).
 
 Code references are to this repo; the successor firmware must reproduce this
-behavior exactly.
+behavior exactly. The frame logic itself lives in
+[IbusProtocol.cpp](../IbusProtocol.cpp) (pure functions), and
+`test/host_tests.cpp` asserts the bytes in this document — the same test
+vectors can verify the successor.
 
 ## Physical layer
 
@@ -48,7 +51,7 @@ behavior exactly.
 
 The IHU polls with 0x6A1. Look at the **low nibble of byte 3** and reply
 with the matching 4-frame sequence on 0x6A2, frames ≤140 ms apart
-([CDCStatus.cpp](../CDCStatus.cpp)):
+([IbusProtocol.cpp](../IbusProtocol.cpp) `nodeReplyFor`, `nodeStatusFrames`; sent by `NodeStatusSender` in [CDCStatus.cpp](../CDCStatus.cpp)):
 
 | 0x6A1 byte3 & 0x0F | Meaning | Reply sequence (byte 0 / byte 3 / bytes 4-5) |
 | --- | --- | --- |
@@ -67,7 +70,7 @@ Notes:
 ## 0x3C8: CDC general status
 
 Sent periodically (≤950 ms) and on events. Layout
-([CDCStatus.cpp](../CDCStatus.cpp) `sendCdcStatus`):
+([IbusProtocol.cpp](../IbusProtocol.cpp) `buildCdcStatus`):
 
 - byte 0: bit7 = event (vs base-time), bit6 = due to remote command,
   bit5 = disc-presence valid. 6.1.6+ sends
@@ -87,7 +90,7 @@ Sent periodically (≤950 ms) and on events. Layout
 ## 0x3C0: CDC control (IHU → CDC)
 
 Byte 0 = `0x80` marks a command/button event. Byte 1 (+byte 2 for presets)
-([Buttons.cpp](../Buttons.cpp), [CDCStatus.cpp](../CDCStatus.cpp)):
+([IbusProtocol.cpp](../IbusProtocol.cpp) `decodeButton`, `buttonAction`, `decodeCdcCommand`):
 
 | byte1 | Meaning | v6 action |
 | --- | --- | --- |
@@ -105,7 +108,7 @@ Byte 0 = `0x80` marks a command/button event. Byte 1 (+byte 2 for presets)
 ## SID text (optional feature, `SID_TEXT_CONTROL_ENABLED`)
 
 Write access must be **granted before every write**
-([SidResource.cpp](../SidResource.cpp)):
+([SidResource.cpp](../SidResource.cpp); frame layout in [IbusProtocol.cpp](../IbusProtocol.cpp) `formatSidText`):
 
 1. **Request** on 0x357 every ~1 s:
    `[0]=0x1F` (node address), `[1]=0x02` (SID object: row 2),

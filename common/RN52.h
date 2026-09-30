@@ -45,7 +45,7 @@ class RN52 {
 	void onGPIO2();
 	void run();
 	void processCommand(const char *cmd);
-	bool parseQResponse(const char data[4]);
+	bool parseQResponse(const char *line);
 
 public:
 	enum AVCRP {PLAYPAUSE, NEXT, PREV, VASSISTANT, VOLUP, VOLDOWN};
