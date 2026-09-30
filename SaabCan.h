@@ -82,6 +82,9 @@ class SaabCan {
 	void sendFunc();
 	int spaceSameId(unsigned id);
 public:
+	// lastTxId/lastTxTime rely on static zero-init: the only instance is the
+	// global saabCan. Don't create a SaabCan with automatic/dynamic storage.
+	// cppcheck-suppress uninitMemberVar
 	SaabCan(): send_thread(osPriorityNormal, 320), txErrors(0), txDropped(0) {}
 	unsigned getTxErrors() { return txErrors; }
 	unsigned getTxDropped() { return txDropped; }

@@ -20,7 +20,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 BENCH="$ROOT/bench"
 REPO="4pplet/BlueSaab"
-# shellcheck source=rc.env
+# shellcheck source=rc.env disable=SC1091
 . "$ROOT/tools/rc.env"
 RC_DIR="$BENCH/rc-$RC_VERSION-$RC_COMMIT"   # new pin = fresh download
 RC_BIN="$RC_DIR/BlueSaab.bin"
@@ -74,7 +74,7 @@ cmd_check() {
 	fi
 	say "Serial ports"
 	cmd_ports
-	[ $ok = 1 ] && say "Ready." || say "Fix the MISSING items above first."
+	if [ $ok = 1 ]; then say "Ready."; else say "Fix the MISSING items above first."; fi
 }
 
 cmd_fetch() {
@@ -109,7 +109,8 @@ cmd_backup() {
 	check_port "$port"
 	need stm32flash "brew install stm32flash"
 	mkdir -p "$BENCH"
-	local out="$BENCH/backup-$(ts).bin"
+	local out
+	out="$BENCH/backup-$(ts).bin"
 	pause_for_bootloader
 	say "Reading 128 KB of flash to $out"
 	stm32flash -r "$out" "$port"
@@ -159,7 +160,8 @@ cmd_console() {
 	local port=${1:-} tag=${2:-session}
 	check_port "$port"
 	mkdir -p "$BENCH"
-	local log="$BENCH/console-$tag-$(ts).log"
+	local log
+	log="$BENCH/console-$tag-$(ts).log"
 	exec python3 "$ROOT/tools/bench_console.py" "$port" "$log"
 }
 
@@ -172,7 +174,9 @@ last_match() {
 
 cmd_summary() {
 	ls "$BENCH"/console-*.log >/dev/null 2>&1 || die "no console logs in $BENCH yet"
-	echo "## Bench findings (from $(ls "$BENCH"/console-*.log | wc -l | tr -d ' ') console log(s))"
+	local logs
+	logs=$(set -- "$BENCH"/console-*.log; echo $#)
+	echo "## Bench findings (from $logs console log(s))"
 	echo
 	echo "- Firmware version (latest boot): $(last_match 'Firmware version:')"
 	echo "- RN52 version:                   $(last_match 'RN52 version:')"

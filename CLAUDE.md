@@ -47,7 +47,9 @@ history is a useful I-Bus protocol reference.
 - `test/` — host unit tests (Scroller, utf_convert), run by CI
 - `tools/` — `rc.env` pins the release candidate under validation;
   `bench.sh` (fetch+verify, backup, flash, logging console, summary) and
-  `bench_console.py`; they write to the gitignored `bench/`
+  `bench_console.py`, which write to the gitignored `bench/`; `lint.sh` runs
+  all linters (`static-analysis.sh` = cppcheck + Clang static analyzer on the
+  firmware, plus shellcheck, ruff, actionlint) — CI runs it on every push
 
 No watchdog exists yet (planned for 6.2.0), so any halt path (`error()`,
 `MBED_ASSERT`, RTX `os_error`) is permanent in the car — avoid them.

@@ -35,7 +35,7 @@ jobs:
         run: |
           mkdir dist
           for e in bin hex elf; do cp BUILD/BlueSaab.$e "dist/BlueSaab-$GITHUB_REF_NAME.$e"; done
-          (cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS >> "$GITHUB_STEP_SUMMARY")
+          (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS >> "$GITHUB_STEP_SUMMARY")
 
       - name: Draft release
         env:

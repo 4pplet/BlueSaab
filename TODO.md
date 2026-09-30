@@ -81,6 +81,14 @@ current meter; do not desk-develop.
       IWDG vs POR vs pin) + a reset counter in RTC backup registers.
 - [ ] Hang-injection debug command (debug builds only) to prove the
       watchdog: wedge a thread → reset within the timeout → full recovery.
+- [ ] **Protocol-logic unit tests** — the biggest test gap today. Host tests
+      cover only Scroller and utf_convert; button decode (the successor's
+      interface contract), the 0x3C8 status byte, the 0x6A2 sequences, SID
+      text framing and RN52 response parsing are untested. Each needs a small
+      extraction into an mbed-free function (details in the 2026-09-29 CI
+      review notes: T1 button decode + action map, T2 0x3C8 builder, T3 SID
+      text formatter, T4 RN52 version parser, T5 Q-response decoder). They
+      change the binary, so they wait until 6.1.7 is released.
 - [ ] Optional: split init so RN52 start-up never delays the CAN side
       (matters if wake is treated as a full reboot).
 - [ ] 9-5 dead-buttons fix if a car and a capture are available.

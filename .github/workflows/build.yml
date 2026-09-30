@@ -62,6 +62,25 @@ jobs:
             BUILD/SHA256SUMS
           if-no-files-found: error
 
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The Clang static analyzer compiles the firmware exactly like the real
+      # build, so it needs the ARM toolchain's headers.
+      - uses: carlosperate/arm-none-eabi-gcc-action@98c40e51546516419841748d3210c290df0d2c6c # v1.13.0
+        with:
+          release: '8-2019-q3'
+
+      - name: Install analyzers
+        run: sudo apt-get update -q && sudo apt-get install -y -q cppcheck clang-tidy
+
+      # cppcheck + Clang static analyzer (firmware), shellcheck, ruff
+      - name: Lint
+        run: tools/lint.sh
+
   host-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 10

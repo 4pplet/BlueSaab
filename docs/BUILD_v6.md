@@ -78,6 +78,14 @@ Every push runs `.github/workflows/build.yml`:
   days — the release is the permanent copy.
 - **host-tests** — Scroller + utf_convert asserts (gnu++98, `-Werror`,
   ASan/UBSan, both char signednesses).
+- **lint** — `tools/lint.sh`: cppcheck + the Clang static analyzer on the
+  firmware (`tools/static-analysis.sh` compiles it exactly like the real
+  build: ARM target, the Makefile's includes/defines, the ARM toolchain's
+  headers), shellcheck on `tools/*.sh`, ruff on `tools/*.py`. Known false
+  positives carry inline `cppcheck-suppress` comments with the reason.
+
+Run the same locally with `tools/lint.sh` (needs cppcheck, clang-tidy from
+Homebrew LLVM, shellcheck, ruff; actionlint optional).
 
 Actions are pinned by commit SHA; Dependabot proposes updates monthly.
 

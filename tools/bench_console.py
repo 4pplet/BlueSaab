@@ -33,7 +33,7 @@ def main():
 
     ser = serial.Serial(port, baud, timeout=0.1)
     log = open(logpath, "a", buffering=1)
-    log.write(stamp() + "=== console opened %s @%d ===\n" % (port, baud))
+    log.write(stamp() + f"=== console opened {port} @{baud} ===\n")
     stop = threading.Event()
 
     def rx():
@@ -42,8 +42,8 @@ def main():
             try:
                 data = ser.read(256)
             except serial.SerialException as e:
-                log.write(stamp() + "=== serial error: %s ===\n" % e)
-                sys.stdout.write("\r\n[serial error: %s]\r\n" % e)
+                log.write(stamp() + f"=== serial error: {e} ===\n")
+                sys.stdout.write(f"\r\n[serial error: {e}]\r\n")
                 stop.set()
                 return
             if not data:
@@ -67,9 +67,8 @@ def main():
         import tty
         old = termios.tcgetattr(fd)
         tty.setcbreak(fd)  # single keys, no echo; output processing intact
-        sys.stdout.write("Connected to %s @%d, logging to %s\n"
-                         "Keys are sent as typed. Ctrl-] or Ctrl-C quits.\n"
-                         % (port, baud, logpath))
+        sys.stdout.write(f"Connected to {port} @{baud}, logging to {logpath}\n"
+                         "Keys are sent as typed. Ctrl-] or Ctrl-C quits.\n")
         sys.stdout.flush()
     try:
         while not stop.is_set():
@@ -77,7 +76,7 @@ def main():
             if not ch or ch == b"\x1d":  # EOF or Ctrl-]
                 break
             ser.write(ch)
-            log.write(stamp() + ">>> sent %r\n" % ch.decode("ascii", "replace"))
+            log.write(stamp() + f">>> sent {ch.decode('ascii', 'replace')!r}\n")
     except KeyboardInterrupt:
         pass
     finally:

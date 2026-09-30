@@ -65,6 +65,8 @@ void SerialLog::run() {
 					break;
 				}
 				case leShortString: {
+					// 4 chars packed into the int value by logShortString()
+					// cppcheck-suppress dangerousTypeCast
 					char *p = (char*)&e->value;
 					for(int i=0; i<4; i++) {
 						if (*p == 0 || *p == '\r' || *p == '\n')
@@ -127,6 +129,9 @@ void SerialLog::logFrame(CANMessage* frame) {
 
 void SerialLog::logShortString(const char *s) {
 	uint32_t buf;
+	// the int is only a 4-byte carrier for chars - see run()
+	// cppcheck-suppress dangerousTypeCast
 	strncpy((char *)&buf, s, 4);
+	// sentinel "format" pointer (leShortString = 1) - see run()
 	log((char *)leShortString, buf);
 }
