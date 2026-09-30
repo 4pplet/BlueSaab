@@ -201,6 +201,22 @@ disables interrupts but the IWDG is independent — but not the RN52 loop,
 which needs a progress check. Kick it from a thread that checks heartbeats
 (CDCStatus 950 ms, SidResource 1 s, logThread 1 s), never from an ISR.
 
+## Protocol extraction + unit tests (2026-09-30 → re-pinned 6.1.7)
+
+Protocol logic moved into pure modules (`IbusProtocol`, `RN52Parse`) and
+unit-tested byte-exact. The refactor was proven behavior-preserving by the
+author (2.46 M-input old-vs-new equivalence: exhaustive button/poll/Q decode,
+fuzzed version parse) and by an independent adversarial review with its own
+harness (formatSidText 2.0 M cases, buildCdcStatus all combinations, Q
+decode 3 M — zero mismatches), which also verified in the disassembly: no
+C++ static-init guards, the ISR-called functions use 0 B stack and call
+nothing, the 0x6A2 tables are in flash (.data −100 B), every button action
+reaches the right Bluetooth call, the version buffer is still written
+front-to-back with the NUL last. Tests mutation-checked (7 planted bugs
+caught, incl. the historic 0x6A2 0x32→0x64 byte). NITs left as-is: the
+0x6A1→signal→table mapping is two-sided glue in CDCStatus (verified correct,
+not host-testable); `sendSequence` doesn't NULL-check (unreachable).
+
 ## Review of the 6.1.7 changes (2026-09-30 → re-pinned 6.1.7)
 
 An independent adversarial review of the 6.1.6 → 6.1.7 firmware diff itself
