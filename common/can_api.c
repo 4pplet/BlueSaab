@@ -35,6 +35,11 @@ uint32_t can_get_rx_overruns(void)
     return can_rx_overruns;
 }
 
+void can_reset_rx_overruns(void)
+{
+    can_rx_overruns = 0;
+}
+
 void can_init(can_t *obj, PinName rd, PinName td)
 {
     can_init_freq(obj, rd, td, 100000);
@@ -415,7 +420,13 @@ int can_mode(can_t *obj, CanMode mode)
     CAN_TypeDef *can = (CAN_TypeDef *)(obj->can);
 
     can->MCR |= CAN_MCR_INRQ ;
-    can_wait_inak(can, 1);
+    if (!can_wait_inak(can, 1)) {
+        // Never entered init mode: BTR is only writable there, so a mode
+        // change now would be lost or land at an unknown later moment.
+        // Withdraw the request and report failure.
+        can->MCR &= ~(uint32_t)CAN_MCR_INRQ;
+        return 0;
+    }
 
     switch (mode) {
         case MODE_NORMAL:

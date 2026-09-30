@@ -193,11 +193,41 @@ Open — design input for 6.2.0, not fixed here:
 
 Halt-path inventory after 6.1.7 (what the 6.2.0 watchdog must cover): RTX
 stack overflow (detected only at context switch), heap exhaustion at boot
-(latent), HardFault (default `b .`), crystal failure loop at boot, and the
-"alive but useless" RN52 retry loop. The IWDG covers all halts — `mbed_die`
+(latent), HardFault (default `b .`), crystal failure loop at boot, RTX ISR
+post-queue overflow (`OS_FIFOSZ` 16 — ~15 posts if one CAN ISR pass drains
+three CDC-on frames; needs ≥ 2 frame times of ISR latency, practically
+unreachable), and the "alive but useless" RN52 retry loop. The IWDG covers all halts — `mbed_die`
 disables interrupts but the IWDG is independent — but not the RN52 loop,
 which needs a progress check. Kick it from a thread that checks heartbeats
 (CDCStatus 950 ms, SidResource 1 s, logThread 1 s), never from an ISR.
+
+## Review of the 6.1.7 changes (2026-09-30 → re-pinned 6.1.7)
+
+An independent adversarial review of the 6.1.6 → 6.1.7 firmware diff itself
+(the deep-audit fixes had been written after that audit's reviewers
+finished). It positively verified the RN52 queue guard (no counter drift on
+any path), the UTF-8 rewrite (3 M fuzzed strings, output identical to the old
+code on all valid UTF-8), the CAN register semantics, and the RAM budget
+(~1.0 KB heap free). Found and fixed:
+
+- **MAJOR — regression:** 6.1.7 made `mode(CAN::Normal)` unconditional in
+  `SaabCan::initialize()` (6.1.1 gated it on the bitrate setup succeeding).
+  If both bitrate attempts timed out, `can_mode()` could clear SILM on the
+  HAL's placeholder 1.2 Mbit/s timing — an error-active node at the wrong
+  bitrate, repeatedly corrupting I-Bus traffic (bus-off/ABOM recovery cycles)
+  until the battery is disconnected. Needed a stuck-then-freed bus at boot.
+  Fixed: normal mode only after a successful bitrate setup, and `can_mode()`
+  never touches BTR unless it really entered init mode.
+- MINOR: the TX retry could put same-ID frames back-to-back (violating the
+  ≥ 10 ms rule) → per-ID spacing enforced at write time. A UTF-8 lead byte
+  truncated at end of string became a spurious Latin-1 letter → dropped.
+  `make EXTRA_FLAGS=…` doesn't rebuild → documented `make clean`.
+- NIT: RX-overrun counter reset after the RX handler is attached (overruns
+  before that are expected); `onRx` also requires a non-zero slot id.
+- Noted, not fixed: CAN init has only one retry — a double failure leaves CAN
+  off until power-cycle (6.2.0 watchdog / periodic self-check). 0x6A2 frames
+  are spaced at exactly the 140 ms maximum, so a retry delay can stretch a gap
+  past the +10 % tolerance (rare; kept the field-proven interval).
 
 ## Bug hunt (2026-07-22, three adversarial reviewers → v6.1.6)
 

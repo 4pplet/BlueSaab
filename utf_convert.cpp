@@ -126,7 +126,13 @@ void utf_convert(const char *from, char *to, int size) {
 			// trail is missing/ASCII. Assume Latin-1 (U+0080-U+00FF == UTF-8
 			// C2/C3 + (b & 0x3F | 0x80)) and consume exactly ONE byte, so the
 			// following ASCII is never swallowed.
-			if (len > 1 && is_cont(from[1])) {
+			if (len > 1 && from[1] == 0) {
+				// A UTF-8 lead byte cut off by the end of the string - the RN52
+				// and copy_text() truncate metadata by bytes. Drop it rather
+				// than guessing a Latin-1 letter. (A Latin-1 string ending in
+				// a letter from 0xC0-0xF7 loses that last letter.)
+				from++;
+			} else if (len > 1 && is_cont(from[1])) {
 				// Broken/truncated UTF-8 (lead + some trail bytes): drop it
 				int n = 1;
 				while (n < len && is_cont(from[n]))

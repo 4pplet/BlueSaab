@@ -32,8 +32,12 @@ GCC 8.5.0 on macOS (Apple Silicon), and continuously in CI with GCC
 
 ```sh
 make                                              # release build
-make EXTRA_FLAGS="-Werror -DSTACK_MONITOR_ENABLED=1"   # e.g. a debug variant
+make clean && make EXTRA_FLAGS="-DSTACK_MONITOR_ENABLED=1"   # a debug variant
 ```
+
+**Always `make clean` when switching `EXTRA_FLAGS`** — the Makefile doesn't
+track flag changes, so a plain `make` just relinks the old objects (and a
+later plain `make` would reuse the variant's objects).
 
 Output: `BUILD/` (gitignored) — `BlueSaab.bin` / `.hex` / `.elf`. Footprint:
 about **88 KB flash with the CI toolchain, ~102 KB with Homebrew 8.5** (of

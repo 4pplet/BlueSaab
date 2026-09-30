@@ -75,8 +75,12 @@ class SaabCan {
 	Thread send_thread;
 	volatile unsigned txErrors;
 	volatile unsigned txDropped;
+	enum {TX_SPACING_SLOTS = 8}; // we transmit 5 distinct IDs
+	unsigned lastTxId[TX_SPACING_SLOTS];   // send-thread only; zero at boot
+	uint32_t lastTxTime[TX_SPACING_SLOTS];
 
 	void sendFunc();
+	int spaceSameId(unsigned id);
 public:
 	SaabCan(): send_thread(osPriorityNormal, 320), txErrors(0), txDropped(0) {}
 	unsigned getTxErrors() { return txErrors; }

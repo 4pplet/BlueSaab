@@ -199,6 +199,20 @@ static void test_convert() {
 	// the same Swedish words in proper UTF-8 still work
 	utf_convert("H\xC3\xA5kan Hellstr\xC3\xB6m", buf, sizeof(buf));
 	assert(strcmp(buf, "Hakan Hellstrom") == 0);
+
+	// a UTF-8 lead byte cut off by the end of the string (metadata is
+	// truncated by bytes) is dropped, not turned into a Latin-1 letter
+	utf_convert("zz\xC3", buf, sizeof(buf));
+	assert(strcmp(buf, "zz") == 0);
+	utf_convert("Hellstr\xC3", buf, sizeof(buf));
+	assert(strcmp(buf, "Hellstr") == 0);
+	utf_convert("Don\xE2", buf, sizeof(buf));
+	assert(strcmp(buf, "Don") == 0);
+	utf_convert("X\xF0", buf, sizeof(buf));
+	assert(strcmp(buf, "X") == 0);
+	// ...but 0xF8-0xFF can't start UTF-8, so a final Latin-1 u-umlaut stays
+	utf_convert("Cr\xFC", buf, sizeof(buf));
+	assert(strcmp(buf, "Cru") == 0);
 }
 
 int main() {

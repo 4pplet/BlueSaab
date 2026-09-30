@@ -13,11 +13,14 @@ for all units; the LDO+TVS hardware mod remains optional on top), and the
 9-5 dead-buttons fix if a test car is available. Plus anything the 6.1.7
 validation session turns up. (Was called "6.1.7" in earlier notes.)
 
-## 6.1.7 (2026-09-29) — unreleased, release candidate
+## 6.1.7 (2026-09-30) — unreleased, release candidate
 
 Deep audit of the whole repo (firmware, docs, CI, external facts); findings
 and dispositions in `docs/V6_CODE_AUDIT.md`. Supersedes the frozen 6.1.6
-candidate, which was never released or flashed.
+candidate, which was never released or flashed. Re-pinned 2026-09-30 after
+an independent review of the 6.1.7 changes themselves found a regression
+(see the CAN-init item) — the first 6.1.7 pin was never flashed either; the
+current pin is in `tools/rc.env`.
 
 - Fixed (regression from 6.1.6): CAN init gave the controller 2 ms to
   enter/leave init mode, but since 6.1.6 it is bus-synchronized and must
@@ -32,12 +35,19 @@ candidate, which was never released or flashed.
   full RN52 command queue could overflow it inside the RTOS kernel →
   permanent halt. Queue occupancy is now tracked atomically at post time.
 - Fixed: CAN init failures (e.g. bus stuck dominant at boot) no longer halt
-  the unit; they are logged and retried.
+  the unit; they are logged and the bitrate setup is retried once. Normal
+  mode is only entered once the bitrate is set, so a failed setup leaves the
+  node silent rather than on the bus at the wrong bitrate. (CAN then stays
+  off until a power cycle — the 6.2.0 watchdog will cover that.)
 - Fixed: a TX frame was dropped at once when all 3 mailboxes were busy; it is
-  now retried for up to 20 ms (a lost 0x6A2 breaks the 9-5 handshake).
+  now retried for up to 20 ms (a lost 0x6A2 breaks the 9-5 handshake), and
+  same-ID frames keep ≥ 10 ms spacing even when a retry delays one.
+- `E`'s RX-overrun count starts after boot (the 3-frame FIFO can overrun
+  before the RX handler is attached).
 - Fixed: invalid UTF-8 in track metadata (e.g. Latin-1 "Håkan Hellström")
   swallowed the following letters; invalid bytes now consume one byte and
-  Latin-1 letters are transliterated.
+  Latin-1 letters are transliterated. A UTF-8 lead byte cut off at the end of
+  a (byte-truncated) title is dropped.
 - Fixed: rare SID temporary-text corruption when the version/PAIRING banner
   and "CONNECTED" collided; the SID event flag is now updated atomically.
 - More stack headroom for four 256-byte threads (now 320).

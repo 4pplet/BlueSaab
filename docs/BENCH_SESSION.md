@@ -62,7 +62,8 @@ when). Full hookup details: [FLASHING_v6_HOWTO.md](FLASHING_v6_HOWTO.md).
       the binary's hash doesn't match, and verifies after writing. Then press
       RESET.
 - [ ] Optional, first: build a stack-monitor variant
-      (`make EXTRA_FLAGS=-DSTACK_MONITOR_ENABLED=1`), flash it with
+      (`make clean && make EXTRA_FLAGS=-DSTACK_MONITOR_ENABLED=1` — the
+      `make clean` matters), flash it with
       `tools/bench.sh flash <FTDI-port> BUILD/BlueSaab.bin` (it warns that
       this isn't the pinned RC — type `yes`), and check on the console that
       no thread's peak nears its stack size. Then flash the RC.

@@ -22,7 +22,7 @@ BENCH="$ROOT/bench"
 REPO="4pplet/BlueSaab"
 # shellcheck source=rc.env
 . "$ROOT/tools/rc.env"
-RC_DIR="$BENCH/rc-$RC_VERSION"
+RC_DIR="$BENCH/rc-$RC_VERSION-$RC_COMMIT"   # new pin = fresh download
 RC_BIN="$RC_DIR/BlueSaab.bin"
 
 die()  { echo "error: $*" >&2; exit 1; }

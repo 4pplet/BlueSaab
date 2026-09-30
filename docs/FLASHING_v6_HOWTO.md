@@ -57,9 +57,10 @@ the `.bin` at address `0x08000000`, program+verify. (This is likely the
 
 ```sh
 # Enter the ROM bootloader: hold BOOT0, press+release RESET, release BOOT0.
-# Then (adjust the serial device name):
-stm32flash -r backup_v6_unit.bin /dev/tty.usbserial-XXXX   # backup — do this!
-stm32flash -w BlueSaab.bin -v /dev/tty.usbserial-XXXX      # write + verify
+# Then (adjust the serial device name; on macOS use /dev/cu.*, not
+# /dev/tty.* — the tty device can block waiting for a carrier signal):
+stm32flash -r backup_v6_unit.bin /dev/cu.usbserial-XXXX   # backup — do this!
+stm32flash -w BlueSaab.bin -v /dev/cu.usbserial-XXXX      # write + verify
 # Press RESET to run the new firmware.
 ```
 
