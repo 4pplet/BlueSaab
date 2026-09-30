@@ -15,6 +15,12 @@ device (D+ has a pull-up but nothing answers); a phone charger avoids that.
 Get a firmware binary first: download the CI artifact or build it per
 [BUILD_v6.md](BUILD_v6.md) (`BlueSaab.bin` / `.elf`).
 
+**Shortcut:** `tools/bench.sh` automates Method A for the pinned release
+candidate — `fetch` (download + SHA-256 check), `backup <port>`,
+`flash <port>` (refuses without a backup or with a hash mismatch) and
+`console <port>` (logging console). Session walkthrough:
+[BENCH_SESSION.md](BENCH_SESSION.md).
+
 ## Method A — ROM serial bootloader (primary, historically used)
 
 **Hardware:** the board's 6-pin FTDI header is laid out for the **FTDI

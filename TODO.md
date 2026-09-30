@@ -8,91 +8,15 @@ RN52 is end-of-life, so v6 can no longer be built).
 
 6.1.7 is the release candidate: the 6.1.2–6.1.6 work plus the 2026-09-29 deep
 audit fixes (see CHANGELOG.md). **Nothing since 6.1.1 has touched hardware
-yet.**
+yet.** The candidate (commit, CI run, `.bin` SHA-256) is pinned in
+[tools/rc.env](tools/rc.env).
 
-**Release candidate:** commit `558b571`, CI run 36602440650, artifact
-`BlueSaab-6.1.7-558b571` (expires 2026-12-28 — CI is reproducible, so a
-re-run of that commit rebuilds the identical file). `BlueSaab.bin` SHA-256
-`0e6e5cb9bedc972cf3f8f4a5a57cd18fdad7c7c89fd8f172174088f5e33a8483`. v6 firmware is validated on the bench and then in the car (decided
-2026-07-22); the `E` command's counters give the quantified bus-health
-verdict.
-
-### Bench phase
-
-Wiring: power from the MicroUSB jack (or the FTDI cable's 5 V; a jumper-type
-adapter set to 3.3 V can't power the board). Console = 3.3 V USB-serial on
-the 2-pin UART2 header (pin 1 = board TX → adapter RXD, pin 2 = board RX ←
-adapter TXD); **UART2 has no GND pin**, so take ground from FTDI-header pin 1.
-Flashing uses the FTDI header (USART1). Details: docs/FLASHING_v6_HOWTO.md.
-
-- [ ] BEFORE flashing: power up with the console attached and record the
-      boot banner (`Firmware version: …`) → docs/V6_CODE_AUDIT.md
-      "deployed unit findings". `d` only prints the RN52 Bluetooth address.
-      It can't show the RN52 firmware version; that comes after flashing.
-- [ ] Back up the flash: `stm32flash -r backup_v6_unit.bin <port>`; also
-      `strings backup_v6_unit.bin | grep -i version`
-- [ ] Download the CI artifact of the RC commit by run id (docs/BUILD_v6.md)
-      and **record its `.bin` SHA-256**. That is the binary being validated.
-- [ ] Flash it; boot banner shows `Firmware version: 6.1.7`
-- [ ] `RN52 version: x.xx` appears ~6 s after boot → record it. It answers
-      the static-SID-text question: < 1.16 = no track metadata, by design.
-      (The RN52's own firmware is not changed by flashing the STM32.)
-- [ ] `d` prints a `BTA=…` line (STM32↔RN52 link alive)
-- [ ] Right after power-up, is "BlueSaab v6" visible to a phone without
-      sending anything, and for how long? (`S%,1084` enables
-      "discoverable on start up".)
-- [ ] `I` → unit drops off the phone's scan list; `V` → **"BlueSaab v6"**
-      reappears; pair; stream; `P`/`N`/`R` control playback
-- [ ] `E`: off-car expect TX failures climbing, TEC ≈ 128, ESR bit 1
-      (error-passive) set, bus-off bit 2 clear, RX overruns 0
-- [ ] RN52 auto power-off (`S^,600` = off after 10 min unconnected, and
-      Microchip doesn't document what wakes it): leave it unconnected >10 min,
-      then `V` and `C` — does it still respond? If not, it needs a power
-      cycle, and the 6.2.0 RN52 escalation becomes urgent.
-- [ ] Current draw from a **12 V** bench supply on connector pin 6 (GND
-      pin 12): idle <10 min and >10 min after the last disconnect, streaming,
-      pairing peak. These are the first real numbers; every mA figure in the
-      docs is an estimate.
-- [ ] Optional: first flash a `STACK_MONITOR_ENABLED=1` build (CI's
-      `stackmon` variant, or `make EXTRA_FLAGS=-DSTACK_MONITOR_ENABLED=1`)
-      and check no thread's peak nears its size
-- [ ] `u` (wipes ALL pairings, including the owner's phone) — only last,
-      and only if re-pairing is acceptable
-
-### In-car phase (any 9-3/9-5; extra valuable on a 9-5)
-
-- [ ] **No warning lights** (airbag/MIL) after entering/leaving CD mode
-      several times. The 0x6A2 sender was restructured, and a malformed
-      sequence lit warnings on a 2004 9-5 historically.
-- [ ] CD mode activates normally, audio plays
-- [ ] Version banner `6.1.7 R<ver>` shows ~4 s on entering CD mode (`<ver>`
-      = the version recorded on the bench)
-- [ ] "CONNECTED" flashes when the phone attaches
-- [ ] Preset 1 → "PAIRING" on SID + phone sees "BlueSaab v6"
-- [ ] Extra-long middle SEEK (>2 s) → same pairing behaviour
-- [ ] Presets 4/5: what actually happens, on an iPhone **and** an Android
-      phone? Microchip documents `AV+`/`AV-` as AVRCP volume commands to
-      the phone, not local RN52 gain. If they do nothing, local gain via
-      `SS,xx` stepping is the alternative.
-- [ ] Presets 3/6, NXT and track ± unchanged
-- [ ] Track metadata scrolls with a clean " - " seam and no flicker or
-      garbled text over a 30+ min drive. Try titles with ’ curly quotes,
-      emoji and å/ä/ö.
-- [ ] Switch source away and back repeatedly → buttons never go dead
-- [ ] Entry beep still sounds (default config)
-- [ ] Boot with an active bus: power-cycle the unit ~10× with the ignition
-      on → it must come up every time (the 6.1.7 CAN-init fix; matters with
-      the inline power-switch mod)
-- [ ] `E` after a drive: TX failures and RX overruns ~0, REC/TEC low, ESR
-      clean
-- [ ] Park overnight with the unit powered, then drive: does Bluetooth
-      reconnect on CD mode? Read `E` before starting the car: TEC ≈ 128 /
-      error-passive would confirm the node transmits into the sleeping bus
-      (see 6.2.0).
-
-Release 6.1.7 only after the in-car phase passes, per docs/BUILD_v6.md: tag
-the validated commit, check that the draft release's `.bin` hash equals the
-recorded one, then publish.
+- [ ] Bench + in-car validation — follow **[docs/BENCH_SESSION.md](docs/BENCH_SESSION.md)**
+      (printable checklist; `tools/bench.sh` fetches and verifies the RC,
+      backs up the unit, flashes, and runs a logging console)
+- [ ] Record the findings in docs/V6_CODE_AUDIT.md (`tools/bench.sh summary`)
+- [ ] Release per docs/BUILD_v6.md: fast-forward master, tag `v6.1.7`, check
+      the draft release's `.bin` hash against `tools/rc.env`, publish
 
 ## Phase 0 — repo hygiene
 

@@ -95,8 +95,10 @@ Releasing a firmware version:
 1. Bump `FIRMWARE_VERSION` in `SaabCan.h` (single source of truth — feeds
    the boot banner and the SID version display) and add the CHANGELOG
    section `## x.y.z …`.
-2. Push; wait for CI green; **validate the CI artifact on real hardware**
-   (bench + car, per the TODO.md checklist) and **record its `.bin` SHA-256**.
+2. Push; wait for CI green; pin the candidate in `tools/rc.env` (version,
+   commit, CI run, `.bin` SHA-256) and **validate exactly that artifact on
+   real hardware** (docs/BENCH_SESSION.md; `tools/bench.sh fetch` verifies
+   the hash).
 3. Fast-forward `master` (the release branch; `revival` is the dev branch —
    never rebase it) and tag the exact commit you validated:
    `git push origin revival:master`, then
@@ -105,8 +107,8 @@ Releasing a firmware version:
 4. The tag triggers `.github/workflows/release.yml`: it checks that the tag
    matches `FIRMWARE_VERSION`, rebuilds, and creates a **draft** release with
    the binaries, `SHA256SUMS` and the CHANGELOG section as notes.
-5. Check that the `.bin` line in `SHA256SUMS` equals the hash you recorded in
-   step 2 (CI is reproducible, so it will), then publish the draft.
+5. Check that the `.bin` line in `SHA256SUMS` equals `RC_BIN_SHA256` from
+   `tools/rc.env` (CI is reproducible, so it will), then publish the draft.
 
 ## Compile-time options
 

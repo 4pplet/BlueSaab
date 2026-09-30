@@ -45,6 +45,9 @@ history is a useful I-Bus protocol reference.
   `RN52` (serial command protocol), `SerialLog`/`SerialRX`, and `can_api.c`
   (our override of the mbed bxCAN driver)
 - `test/` — host unit tests (Scroller, utf_convert), run by CI
+- `tools/` — `rc.env` pins the release candidate under validation;
+  `bench.sh` (fetch+verify, backup, flash, logging console, summary) and
+  `bench_console.py`; they write to the gitignored `bench/`
 
 No watchdog exists yet (planned for 6.2.0), so any halt path (`error()`,
 `MBED_ASSERT`, RTX `os_error`) is permanent in the car — avoid them.
@@ -71,7 +74,8 @@ counters, `H` help. 6.1.2+ logs `RN52 version: x.xx` at boot.
 - `docs/SAAB_9-5_NOTES.md` — 9-5 research, model quirks
 - `docs/RELATED_PROJECTS.md` — lineage, competitors, 2006+ landscape
 - `HARDWARE/README.md` — board files, headers, interim power-switch mod
-- `TODO.md` — roadmap and the 6.1.7 validation checklist
+- `docs/BENCH_SESSION.md` — printable bench + in-car validation checklist
+- `TODO.md` — roadmap
 
 ## Project direction
 
