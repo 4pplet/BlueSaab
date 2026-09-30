@@ -219,11 +219,19 @@ code on all valid UTF-8), the CAN register semantics, and the RAM budget
   Fixed: normal mode only after a successful bitrate setup, and `can_mode()`
   never touches BTR unless it really entered init mode.
 - MINOR: the TX retry could put same-ID frames back-to-back (violating the
-  ≥ 10 ms rule) → per-ID spacing enforced at write time. A UTF-8 lead byte
+  ≥ 10 ms rule) → per-ID spacing enforced at write time (≥ ~9 ms guaranteed
+  given the 1 ms RTX tick, typically 10–11 ms; 0x337 groups now go out at
+  ~0/10/21 ms instead of ~0/9/19 ms). A UTF-8 lead byte
   truncated at end of string became a spurious Latin-1 letter → dropped.
   `make EXTRA_FLAGS=…` doesn't rebuild → documented `make clean`.
 - NIT: RX-overrun counter reset after the RX handler is attached (overruns
   before that are expected); `onRx` also requires a non-zero slot id.
+- A follow-up review of these fixes (2026-09-30) found no blockers or
+  majors: every constructor × `initialize()` result combination now ends in
+  a correct or inert (silent) state; utf_convert re-fuzzed (14.9 M calls,
+  identical on all valid UTF-8); send-thread stack peak ~156 of 320 B.
+  Heap free is now ~0.96 KB (the spacing table added 64 B of .bss).
+  `can_monitor()` still ignores its INAK waits — unused, harmless.
 - Noted, not fixed: CAN init has only one retry — a double failure leaves CAN
   off until power-cycle (6.2.0 watchdog / periodic self-check). 0x6A2 frames
   are spaced at exactly the 140 ms maximum, so a retry delay can stretch a gap

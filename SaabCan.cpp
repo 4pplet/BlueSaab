@@ -142,10 +142,13 @@ uint32_t SaabCan::getESR() {
 	return iBus.read_ESR();
 }
 
-// Same-ID frames must be >=10 ms apart on the bus. Producers already space
+// Same-ID frames should be >=10 ms apart on the bus. Producers already space
 // their groups, but a retry delay in sendFunc can bunch the next frame of a
 // group up behind the delayed one, so enforce the spacing here too (measured
-// when the frame is handed to a mailbox). Returns the slot to record into.
+// when the frame is handed to a mailbox). RTX waits end on a 1 ms tick, so
+// the guaranteed minimum is ~9 ms (typically 10-11 ms) - the same margin the
+// field-proven MessageSender 10 ms interval always had. Returns the slot to
+// record into.
 int SaabCan::spaceSameId(unsigned id) {
 	int freeSlot = -1;
 	for (int i = 0; i < TX_SPACING_SLOTS; i++) {
