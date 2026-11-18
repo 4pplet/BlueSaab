@@ -10,6 +10,10 @@
 #   tools/bench.sh backup  <port>        read the unit's flash (never overwrites)
 #   tools/bench.sh flash   <port> [bin]  flash the verified RC, or another .bin
 #                                        (e.g. a stack-monitor build); needs a backup
+#   tools/bench.sh restore <port> [bin|release]
+#                                        roll back: the oldest backup (the unit's
+#                                        original firmware), a given .bin, or the
+#                                        last published release
 #   tools/bench.sh console <port> [tag]  logging console on the UART2 header
 #   tools/bench.sh summary               extract the facts to record from logs
 #
@@ -30,6 +34,43 @@ say()  { echo "==> $*"; }
 sha()  { if command -v shasum >/dev/null; then shasum -a 256 "$1" | cut -d' ' -f1; else sha256sum "$1" | cut -d' ' -f1; fi; }
 ts()   { date +%Y%m%d-%H%M%S; }
 need() { command -v "$1" >/dev/null || die "$1 not found — $2"; }
+
+FLASH_BYTES=131072   # STM32F103RB: 128 KB
+
+# A firmware image starts with the Cortex-M vector table: word 0 is the
+# initial stack pointer, inside the F103RB's 20 KB SRAM (0x20000000 to
+# 0x20005000). Rejects erased/blank flash (0xFF...) and .elf/.hex files.
+is_image() {
+	local b
+	b=$(od -An -tx1 -N4 "$1" | tr -d ' \n')
+	[ "${#b}" = 8 ] && [ "${b:6:2}" = 20 ] && [ $((16#${b:4:2})) -le 80 ]
+}
+
+# Complete backups, oldest first (timestamped names sort chronologically,
+# so backups must not be renamed).
+# The oldest is the unit's original firmware; later ones may be RC images.
+backups() {
+	local b
+	for b in "$BENCH"/backup-*.bin; do
+		[ -f "$b" ] && [ "$(wc -c <"$b" | tr -d ' ')" = "$FLASH_BYTES" ] && is_image "$b" && echo "$b"
+	done
+	return 0
+}
+
+# The oldest complete backup, or nothing. (Not via backups+head: under
+# pipefail, head closing the pipe early fails the whole pipeline.)
+oldest_backup() {
+	local b
+	for b in "$BENCH"/backup-*.bin; do
+		if [ -f "$b" ] && [ "$(wc -c <"$b" | tr -d ' ')" = "$FLASH_BYTES" ] && is_image "$b"; then
+			echo "$b"
+			return 0
+		fi
+	done
+	return 0
+}
+
+fw_version() { strings "$1" | grep -i 'firmware version' | head -1 || true; }
 
 pause_for_bootloader() {
 	echo
@@ -109,25 +150,48 @@ cmd_backup() {
 	check_port "$port"
 	need stm32flash "brew install stm32flash"
 	mkdir -p "$BENCH"
-	local out
+	local out tmp first
 	out="$BENCH/backup-$(ts).bin"
+	tmp="$out.part"   # only a complete read becomes a backup-*.bin
+	first=$(oldest_backup)
 	pause_for_bootloader
 	say "Reading 128 KB of flash to $out"
-	stm32flash -r "$out" "$port"
-	[ -s "$out" ] || die "backup is empty"
-	say "Backup saved — keep this file: it is the unit's original firmware"
+	if ! stm32flash -r "$tmp" "$port"; then
+		rm -f "$tmp"
+		die "flash read failed. Check the bootloader entry and wiring and retry.
+If the chip reports read protection (RDP), no backup is possible: see
+\"Rolling back\" in docs/BENCH_SESSION.md before flashing anything."
+	fi
+	local size
+	size=$(wc -c <"$tmp" | tr -d ' ')
+	if [ "$size" != "$FLASH_BYTES" ]; then
+		rm -f "$tmp"
+		die "backup is $size bytes, expected $FLASH_BYTES — not saved; retry"
+	fi
+	if ! is_image "$tmp"; then
+		rm -f "$tmp"
+		die "the flash holds no firmware (erased/blank chip) — not saved as a backup.
+After stm32flash -k, restore the release first: \"Rolling back\" in docs/BENCH_SESSION.md."
+	fi
+	mv -n "$tmp" "$out"
+	say "Backup saved — keep this file"
 	echo "  SHA-256 $(sha "$out")"
-	echo "  size    $(wc -c <"$out" | tr -d ' ') bytes"
 	local v
-	v=$(strings "$out" | grep -i 'firmware version' | head -1 || true)
+	v=$(fw_version "$out")
 	echo "  version ${v:-(no version string found — firmware older than the banner, or blank chip)}"
+	if [ -n "$first" ]; then
+		echo "  Note: the unit's ORIGINAL firmware is the oldest backup, $(basename "$first")."
+	else
+		echo "  This is the unit's original firmware — the one 'restore' puts back."
+	fi
 }
 
 cmd_flash() {
 	local port=${1:-} bin=${2:-}
 	check_port "$port"
 	need stm32flash "brew install stm32flash"
-	ls "$BENCH"/backup-*.bin >/dev/null 2>&1 || die "no backup in $BENCH — run tools/bench.sh backup $port first"
+	[ -n "$(oldest_backup)" ] || die "no complete backup in $BENCH — run tools/bench.sh backup $port first
+(If read protection blocks the backup: \"Rolling back\" in docs/BENCH_SESSION.md.)"
 	if [ -z "$bin" ]; then
 		bin=$RC_BIN
 		[ -f "$bin" ] || die "RC not fetched — run tools/bench.sh fetch"
@@ -135,9 +199,10 @@ cmd_flash() {
 		say "Flashing the $RC_VERSION release candidate ($RC_BIN_SHA256)"
 	else
 		[ -f "$bin" ] || die "$bin not found"
+		is_image "$bin" || die "$bin is not a raw firmware image (.bin) for this chip"
 		local h v
 		h=$(sha "$bin")
-		v=$(strings "$bin" | grep 'Firmware version' | head -1 || true)
+		v=$(fw_version "$bin")
 		if [ "$h" = "$RC_BIN_SHA256" ]; then
 			say "Flashing $bin — this IS the pinned release candidate"
 		else
@@ -151,9 +216,57 @@ cmd_flash() {
 		fi
 	fi
 	pause_for_bootloader
-	stm32flash -w "$bin" -v "$port"
+	stm32flash -w "$bin" -v "$port" || die "write failed. Check the bootloader entry and wiring and retry.
+If the chip is read-protected (RDP): \"Rolling back\" in docs/BENCH_SESSION.md."
 	say "Flashed and verified. Press RESET to start it."
 	echo "Then: tools/bench.sh console <UART2 port>"
+}
+
+cmd_restore() {
+	local port=${1:-} src=${2:-}
+	check_port "$port"
+	need stm32flash "brew install stm32flash"
+	local bin what
+	case "$src" in
+	"")
+		bin=$(oldest_backup)
+		[ -n "$bin" ] || die "no complete backup in $BENCH. Use: tools/bench.sh restore $port release"
+		what="the unit's original firmware (oldest backup)"
+		;;
+	release)
+		need gh "brew install gh && gh auth login"
+		local dir="$BENCH/release-$FALLBACK_TAG"
+		bin="$dir/$FALLBACK_BIN"
+		if [ ! -f "$bin" ]; then
+			mkdir -p "$dir"
+			say "Downloading $FALLBACK_BIN from release $FALLBACK_TAG"
+			gh release download "$FALLBACK_TAG" --repo "$REPO" -p "$FALLBACK_BIN" -D "$dir" \
+				|| die "download failed"
+		fi
+		[ "$(sha "$bin")" = "$FALLBACK_BIN_SHA256" ] || die "$bin fails its hash check (expected $FALLBACK_BIN_SHA256) — do NOT flash it; delete it and retry"
+		what="published release $FALLBACK_TAG (hash verified)"
+		;;
+	*)
+		bin=$src
+		[ -f "$bin" ] || die "$bin not found"
+		what="$bin"
+		;;
+	esac
+	is_image "$bin" || die "$bin is not a raw firmware image (.bin) for this chip"
+	local v
+	v=$(fw_version "$bin")
+	echo "Restoring $what"
+	echo "  file    $bin"
+	echo "  SHA-256 $(sha "$bin")"
+	echo "  ${v:-(no version string)}"
+	printf "Type 'yes' to flash it: "
+	local answer
+	read -r answer
+	[ "$answer" = "yes" ] || die "aborted"
+	pause_for_bootloader
+	stm32flash -w "$bin" -v "$port" || die "write failed. Check the bootloader entry and wiring and retry.
+If the chip is read-protected (RDP): \"Rolling back\" in docs/BENCH_SESSION.md."
+	say "Restored and verified. Press RESET to start it."
 }
 
 cmd_console() {
@@ -186,10 +299,10 @@ cmd_summary() {
 	echo "- CAN RX FIFO overruns:           $(last_match 'CAN RX FIFO overruns:')"
 	echo "- CAN REC / TEC:                  $(last_match 'CAN RX error counter (REC):') / $(last_match 'CAN TX error counter (TEC):')"
 	echo "- CAN ESR:                        $(last_match 'CAN ESR:')"
-	local b
-	for b in "$BENCH"/backup-*.bin; do
-		[ -f "$b" ] || continue
-		echo "- Backup $(basename "$b"): $(strings "$b" | grep -i 'firmware version' | head -1 || echo 'no version string')"
+	local b v
+	backups | while IFS= read -r b; do
+		v=$(fw_version "$b")
+		echo "- Backup $(basename "$b"): ${v:-no version string}"
 	done
 	echo
 	echo "Warnings seen in the logs:"
@@ -203,7 +316,8 @@ case "${1:-}" in
 	fetch)   cmd_fetch ;;
 	backup)  shift; cmd_backup "$@" ;;
 	flash)   shift; cmd_flash "$@" ;;
+	restore) shift; cmd_restore "$@" ;;
 	console) shift; cmd_console "$@" ;;
 	summary) cmd_summary ;;
-	*) sed -n '4,16p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+	*) sed -n '4,19p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

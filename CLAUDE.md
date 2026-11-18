@@ -53,8 +53,9 @@ history is a useful I-Bus protocol reference.
   run by CI with sanitizers. The protocol tests pin the field-proven frames
   and button map byte-exact: a failing test means a behavior change — make it
   deliberate and update docs/IBUS_PROTOCOL.md / USAGE_v6.md with it.
-- `tools/` — `rc.env` pins the release candidate under validation;
-  `bench.sh` (fetch+verify, backup, flash, logging console, summary) and
+- `tools/` — `rc.env` pins the release candidate under validation and the
+  rollback fallback release; `bench.sh` (fetch+verify, backup, flash,
+  restore, logging console, summary) and
   `bench_console.py`, which write to the gitignored `bench/`; `lint.sh` runs
   all linters (`static-analysis.sh` = cppcheck + Clang static analyzer on the
   firmware, plus shellcheck, ruff, actionlint) — CI runs it on every push

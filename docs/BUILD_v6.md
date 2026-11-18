@@ -125,6 +125,9 @@ Releasing a firmware version:
    the binaries, `SHA256SUMS` and the CHANGELOG section as notes.
 5. Check that the `.bin` line in `SHA256SUMS` equals `RC_BIN_SHA256` from
    `tools/rc.env` (CI is reproducible, so it will), then publish the draft.
+6. Point the rollback fallback at the new release: set `FALLBACK_TAG`,
+   `FALLBACK_BIN` and `FALLBACK_BIN_SHA256` in `tools/rc.env` (used by
+   `tools/bench.sh restore <port> release`).
 
 ## Compile-time options
 

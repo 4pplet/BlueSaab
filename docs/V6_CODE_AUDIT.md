@@ -201,6 +201,41 @@ disables interrupts but the IWDG is independent — but not the RN52 loop,
 which needs a progress check. Kick it from a thread that checks heartbeats
 (CDCStatus 950 ms, SidResource 1 s, logThread 1 s), never from an ISR.
 
+## Bench-checklist coverage + rollback (2026-11-18, no firmware change)
+
+Before the first hardware session, an independent reviewer mapped every
+runtime change v6.1.1 → 6.1.7 (`2b55597`) to the BENCH_SESSION.md step
+that would expose it if broken. Already covered: the normal CAN path, TX
+spacing/retry (warning lights, drive, `E`), version/banner, PAIRING/
+CONNECTED, presets 4/5, extra-long SEEK, SID scrolling and UTF-8, `E`,
+and the host-test-proven refactors. Weak or missing, now added to the
+checklist: stack margins (monitor build made mandatory and exercised;
+optional car run), ignition cycles with the radio in CD mode (the only
+path to the power-on/power-down 0x6A2 replies), unit power-cycles in CD
+mode (CAN up before the 5 s RN52 boot wait; `CAN:` init-failure log
+lines; `E` right after boot), a phone connecting during the RN52 boot
+wait (the post-boot `Q`), RN52 queue flooding, `B` then `C` reboot path,
+`d` with a `%` title, `R?` banner timing, CD-mode re-entry text, and a
+second `summary` over the car logs. Not testable without a CAN injector:
+the ID-0 frame fix.
+
+The same pass hardened rollback (`tools/bench.sh`): a failed or short
+flash read used to leave a `backup-*.bin` that satisfied `flash`'s backup
+guard — now only a complete 128 KB read is saved; new `restore` flashes
+the oldest backup (the original firmware) or the last published release
+(hash-pinned in `tools/rc.env`). Docs corrected: with read protection the
+bootloader refuses writes too, so `stm32flash -k` (mass erase) comes
+first. An independent review of the rollback change (bash 3.2, fake
+stm32flash harness) found that a backup of an erased chip (all 0xFF,
+e.g. right after `-k`) would have become the "original" — images are now
+accepted only if word 0 is an initial stack pointer in SRAM, which also
+rejects `.elf`/`.hex` given to `flash`/`restore`. Also added: RDP hint
+on write failure, `mv -n`, "one unit per `bench/`, don't rename backups"
+(backups aren't tied to a chip UID — left as a documented limit). RDP
+behaviour confirmed from stm32flash source (`-k` = Readout Unprotect,
+device resets itself) and AN3155 (unprotect mass-erases); that writes are
+NACKed under RDP is from secondary quotes of AN3155, not the PDF itself.
+
 ## Protocol extraction + unit tests (2026-09-30 → re-pinned 6.1.7)
 
 Protocol logic moved into pure modules (`IbusProtocol`, `RN52Parse`) and

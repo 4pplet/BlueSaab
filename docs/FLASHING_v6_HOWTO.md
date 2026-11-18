@@ -17,8 +17,9 @@ Get a firmware binary first: download the CI artifact or build it per
 
 **Shortcut:** `tools/bench.sh` automates Method A for the pinned release
 candidate — `fetch` (download + SHA-256 check), `backup <port>`,
-`flash <port>` (refuses without a backup or with a hash mismatch) and
-`console <port>` (logging console). Session walkthrough:
+`flash <port>` (refuses without a backup or with a hash mismatch),
+`restore <port> [bin|release]` (rollback: the oldest backup, a given file,
+or the last published release) and `console <port>` (logging console). Session walkthrough:
 [BENCH_SESSION.md](BENCH_SESSION.md).
 
 ## Method A — ROM serial bootloader (primary, historically used)
@@ -153,9 +154,12 @@ board (test point/jumper — schematic shows the net, not the destination).
   TX/RX swapped, or no common GND.
 - **Board doesn't power up from the adapter:** its VCC pin is probably 3.3 V —
   use the MicroUSB jack for power.
-- **Readback fails / flash is protected:** readout protection (RDP) would
-  block backups. UNKNOWN whether any v6 units shipped with RDP set — if you
-  hit this, note it here; flashing still works (mass-erase clears RDP and
-  the old firmware with it — no backup possible in that case).
+- **Readback fails / flash is protected:** readout protection (RDP) makes
+  the ROM bootloader refuse reads *and* writes, so no backup is possible.
+  UNKNOWN whether any v6 units shipped with RDP set — if you hit this, note
+  it here. `stm32flash -k <port>` removes RDP by mass-erasing the chip
+  (the old firmware is lost) and resets it; re-enter the bootloader before
+  writing. Bench procedure: "Rolling back" in
+  [BENCH_SESSION.md](BENCH_SESSION.md#rolling-back).
 - TODO (needs a board in hand to confirm): FTDI header pin-1 orientation
   marking on the v6 silkscreen; exact 10-pin header key orientation.
